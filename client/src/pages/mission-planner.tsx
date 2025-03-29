@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, PlusCircle, Save, Check, Trash2 } from "lucide-react";
 import { MapComponent } from "@/components/map-component";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { processWaypoints, calculateMissionStats, formatDistance, formatTime } from "@/lib/mission-calculations";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -136,6 +137,7 @@ export default function MissionPlanner() {
     // Process start date and time
     let combinedStartTime = undefined;
     if (values.startDate) {
+      // Create a new date object to avoid mutating the original
       combinedStartTime = new Date(values.startDate);
       if (values.startTime) {
         const [hours, minutes] = values.startTime.split(':').map(Number);
@@ -146,6 +148,7 @@ export default function MissionPlanner() {
     // Process end date and time
     let combinedEndTime = undefined;
     if (values.endDate) {
+      // Create a new date object to avoid mutating the original
       combinedEndTime = new Date(values.endDate);
       if (values.endTime) {
         const [hours, minutes] = values.endTime.split(':').map(Number);
@@ -313,6 +316,58 @@ export default function MissionPlanner() {
                               </FormItem>
                             )}
                           />
+                        </AccordionContent>
+                      </AccordionItem>
+                      
+                      <AccordionItem value="waypoints">
+                        <AccordionTrigger>Waypoint Management</AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-4">
+                            <div className="flex justify-between">
+                              <h3 className="text-sm font-medium">Current Waypoints</h3>
+                              <Button 
+                                type="button" 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => setWaypoints([])}
+                                disabled={waypoints.length === 0}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Clear All
+                              </Button>
+                            </div>
+                            
+                            {waypoints.length === 0 ? (
+                              <p className="text-sm text-gray-500">No waypoints added yet. Click on the map to add waypoints.</p>
+                            ) : (
+                              <div className="max-h-40 overflow-y-auto border rounded-md">
+                                <div className="divide-y">
+                                  {waypoints.map((waypoint, index) => (
+                                    <div key={index} className="p-2 flex justify-between items-center hover:bg-gray-50">
+                                      <div className="text-sm">
+                                        <span className="font-medium">Point {index + 1}:</span>{' '}
+                                        <span className="text-gray-600">
+                                          {waypoint.lat.toFixed(6)}, {waypoint.lng.toFixed(6)}, {waypoint.altitude}m
+                                        </span>
+                                      </div>
+                                      <Button 
+                                        type="button" 
+                                        size="sm" 
+                                        variant="ghost"
+                                        onClick={() => {
+                                          const newWaypoints = [...waypoints];
+                                          newWaypoints.splice(index, 1);
+                                          setWaypoints(newWaypoints);
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-gray-500" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </AccordionContent>
                       </AccordionItem>
                       
@@ -484,57 +539,64 @@ export default function MissionPlanner() {
                   </form>
                 </Form>
                 
-                <div className="mt-6">
-                  <h3 className="font-medium mb-2">Waypoints ({waypoints.length})</h3>
-                  {waypoints.length === 0 ? (
-                    <p className="text-sm text-gray-500">No waypoints added. Click on the map to add waypoints.</p>
-                  ) : (
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {waypoints.map((waypoint, index) => (
-                        <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded border">
-                          <div className="text-sm">
-                            <span className="font-mono">
-                              {waypoint.lat.toFixed(6)}°, {waypoint.lng.toFixed(6)}°
-                            </span>
-                            <span className="text-gray-500 ml-2">
-                              {waypoint.altitude ? `${waypoint.altitude}m` : 'Default altitude'}
-                            </span>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              const newWaypoints = [...waypoints];
-                              newWaypoints.splice(index, 1);
-                              setWaypoints(newWaypoints);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      ))}
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full"
-                        onClick={() => setWaypoints([])}
-                      >
-                        Clear All Waypoints
-                      </Button>
+                {/* Mission status panel with calculated stats - shown when we have waypoints */}
+                {waypoints.length > 1 && (
+                  <div className="mt-6 border rounded-md p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
+                    <h3 className="font-medium text-blue-800 mb-3">Mission Statistics</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white p-3 rounded-md shadow-sm">
+                        <p className="text-sm text-gray-500 mb-1">Total Distance</p>
+                        <p className="text-xl font-bold text-blue-600">
+                          {formatDistance(calculateMissionStats(processWaypoints(waypoints)).totalDistance)}
+                        </p>
+                      </div>
+                      <div className="bg-white p-3 rounded-md shadow-sm">
+                        <p className="text-sm text-gray-500 mb-1">Estimated Flight Time</p>
+                        <p className="text-xl font-bold text-indigo-600">
+                          {formatTime(calculateMissionStats(processWaypoints(waypoints)).totalTime)}
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      * Flight time calculated based on average drone speed and waypoint configurations
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
             
             {/* Map for mission planning */}
             <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Mission Waypoint Planning</CardTitle>
-                <CardDescription>
-                  Click on the map to add waypoints for your mission path
-                </CardDescription>
+              <CardHeader className="flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle>Mission Waypoint Planning</CardTitle>
+                  <CardDescription>
+                    Click on the map to add waypoints for your mission path
+                  </CardDescription>
+                </div>
+                
+                {waypoints.length > 1 && (
+                  <div className="bg-gray-100 rounded-md p-3 shadow-sm min-w-[220px]">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <span className="text-gray-500 font-medium">Waypoints:</span>
+                      <span className="font-bold text-blue-600">{waypoints.length}</span>
+                      
+                      <span className="text-gray-500 font-medium">Est. Distance:</span>
+                      <span className="font-bold text-blue-600">
+                        {formatDistance(calculateMissionStats(
+                          processWaypoints(waypoints)
+                        ).totalDistance)}
+                      </span>
+                      
+                      <span className="text-gray-500 font-medium">Est. Flight Time:</span>
+                      <span className="font-bold text-blue-600">
+                        {formatTime(calculateMissionStats(
+                          processWaypoints(waypoints)
+                        ).totalTime)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="h-[600px] w-full rounded-lg border border-gray-200 overflow-hidden">

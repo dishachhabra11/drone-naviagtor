@@ -170,14 +170,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/missions', isAuthenticated, async (req, res) => {
     try {
-      const missionData = insertMissionSchema.parse({
+      // Prepare the mission data
+      const data = {
         ...req.body,
         organizationId: (req.user as any).id
-      });
+      };
+      
+      // Convert date strings to Date objects if needed
+      if (data.startTime && typeof data.startTime === 'string') {
+        data.startTime = new Date(data.startTime);
+      }
+      
+      if (data.endTime && typeof data.endTime === 'string') {
+        data.endTime = new Date(data.endTime);
+      }
+      
+      const missionData = insertMissionSchema.parse(data);
       
       const mission = await storage.createMission(missionData);
       res.status(201).json(mission);
     } catch (error) {
+      console.error('Mission creation error:', error);
       res.status(400).json({ message: 'Invalid mission data', error });
     }
   });
