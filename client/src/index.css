@@ -86,9 +86,34 @@
   }
 }
 
+/* Throb animation for active drones */
+@keyframes throb {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 61, 0, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 61, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 61, 0, 0);
+  }
+}
+
 /* Give moving drones a higher z-index */
 .custom-drone-icon-moving {
   z-index: 950 !important;
+}
+
+/* Style for animated path */
+.mission-path-active {
+  animation: dash 15s linear infinite;
+  stroke-dasharray: 10, 10;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -20;
+  }
 }
 
 /* Tooltip styles for drone labels */

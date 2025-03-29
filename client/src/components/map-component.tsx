@@ -15,17 +15,19 @@ const provider = new OpenStreetMapProvider();
 
 /**
  * Moving marker component for active drone missions
- * Shows a drone moving along its path during missions
+ * Shows a drone moving along its path during missions with speed based on mission duration
  */
 function MovingMarker({ 
   drone, 
   path, 
   isActive,
-  speed = 10 // meters per second
+  mission,
+  speed = 10 // meters per second (default)
 }: { 
   drone: Drone, 
   path: L.LatLng[], 
   isActive: boolean,
+  mission?: Mission,
   speed?: number 
 }) {
   const map = useMap();
@@ -121,32 +123,88 @@ function MovingMarker({
   
   if (!isActive || !position) return null;
   
-  // Create custom drone icon
+  // Calculate mission progress percentage
+  const calculateMissionProgress = () => {
+    if (!mission || !path.length) return 0;
+    
+    // If we're at the end, return 100%
+    if (segmentIndex >= path.length - 1) return 100;
+    
+    // Calculate total distance traveled
+    let totalDistance = 0;
+    for (let i = 0; i < segmentIndex; i++) {
+      totalDistance += path[i].distanceTo(path[i+1]);
+    }
+    
+    // Add the distance traveled in current segment
+    if (segmentIndex < path.length - 1) {
+      const from = path[segmentIndex];
+      const to = path[segmentIndex + 1];
+      const segmentLength = from.distanceTo(to);
+      const ratio = Math.min(progress / segmentLength, 1);
+      totalDistance += segmentLength * ratio;
+    }
+    
+    // Calculate total path distance
+    let pathTotalDistance = 0;
+    for (let i = 0; i < path.length - 1; i++) {
+      pathTotalDistance += path[i].distanceTo(path[i+1]);
+    }
+    
+    return pathTotalDistance > 0 ? (totalDistance / pathTotalDistance) * 100 : 0;
+  };
+  
+  const progressPercent = calculateMissionProgress();
+  
+  // Create custom drone icon with progress indicator
   const droneIcon = L.divIcon({
     className: 'custom-drone-icon-moving',
     html: `<div style="
-      width: 24px; 
-      height: 24px; 
-      background-color: #FF9800; 
-      border-radius: 50%; 
-      border: 3px solid white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 8px rgba(0,0,0,0.7);
       position: relative;
+      width: 28px; 
+      height: 28px;
     ">
       <div style="
-        position: absolute;
-        width: 12px;
-        height: 12px;
-        background-color: #FF3D00;
-        border-radius: 50%;
-        animation: pulse 1.5s infinite;
-      "></div>
+        width: 24px; 
+        height: 24px; 
+        background-color: #FF9800; 
+        border-radius: 50%; 
+        border: 3px solid white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 8px rgba(0,0,0,0.7);
+        position: relative;
+        z-index: 2;
+        animation: throb 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
+      ">
+        <div style="
+          position: absolute;
+          width: 14px;
+          height: 14px;
+          background-color: #FF3D00;
+          border-radius: 50%;
+          animation: pulse 1.5s infinite;
+          z-index: 3;
+        "></div>
+      </div>
+      ${progressPercent > 0 ? `
+        <div style="
+          position: absolute;
+          top: -8px;
+          left: -8px;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: conic-gradient(#4CAF50 ${progressPercent}%, transparent ${progressPercent}%);
+          clip-path: polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0);
+          opacity: 0.7;
+          z-index: 1;
+        "></div>
+      ` : ''}
     </div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
   });
   
   return (
@@ -432,10 +490,36 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
     });
   }, [processedWaypoints, missionStats]);
   
-  // Find active missions and create moving markers for them
+  // Check scheduled missions and find ones that should be active based on current time
   const activeMissions = useMemo(() => {
-    return missions.filter(mission => mission.status === 'in-progress');
+    const now = new Date();
+    return missions.filter(mission => {
+      // Already in-progress missions are active
+      if (mission.status === 'in-progress') return true;
+      
+      // Planned missions should activate when their start time is reached
+      if (mission.status === 'planned' && mission.startTime) {
+        const startTime = new Date(mission.startTime);
+        return startTime <= now;
+      }
+      
+      return false;
+    });
   }, [missions]);
+  
+  // Calculate the total distance of a mission path
+  const calculateTotalPathDistance = (waypoints: Waypoint[]): number => {
+    if (!waypoints || waypoints.length < 2) return 0;
+    
+    let totalDistance = 0;
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const p1 = L.latLng(waypoints[i].lat, waypoints[i].lng);
+      const p2 = L.latLng(waypoints[i + 1].lat, waypoints[i + 1].lng);
+      totalDistance += p1.distanceTo(p2);
+    }
+    
+    return totalDistance;
+  };
   
   const activeMissionMarkers = useMemo(() => {
     return activeMissions.map(mission => {
@@ -444,7 +528,7 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
       
       // Find the assigned drone(s) for this mission
       const assignedDrones = drones.filter(drone => 
-        drone.status === 'in-mission' && 
+        (drone.status === 'in-mission' || drone.status === 'available') && 
         drone.assignedMissionId === mission.id
       );
       
@@ -453,13 +537,43 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
       // Create path from waypoints for the moving marker
       const path = mission.waypoints.map(wp => L.latLng(wp.lat, wp.lng));
       
+      // Calculate appropriate speed based on mission data and estimated time
+      let calculatedSpeed = 10; // Default speed in meters per second
+      
+      // If we have mission start and end times, calculate speed to complete within that timeframe
+      if (mission.startTime && mission.endTime) {
+        const startTime = new Date(mission.startTime);
+        const endTime = new Date(mission.endTime);
+        const missionDuration = (endTime.getTime() - startTime.getTime()) / 1000; // in seconds
+        
+        if (missionDuration > 0) {
+          const pathDistance = calculateTotalPathDistance(mission.waypoints);
+          if (pathDistance > 0) {
+            // Speed = distance / time (meters per second)
+            calculatedSpeed = pathDistance / missionDuration;
+          }
+        }
+      } else {
+        // Calculate based on processed waypoints
+        const processedPath = processWaypoints(mission.waypoints);
+        const stats = calculateMissionStats(processedPath);
+        if (stats.totalDistance > 0 && stats.totalTime > 0) {
+          calculatedSpeed = stats.totalDistance / stats.totalTime;
+        }
+      }
+      
+      // Ensure speed is within reasonable bounds (1-30 m/s)
+      calculatedSpeed = Math.max(1, Math.min(30, calculatedSpeed));
+      
+      // Create a moving marker for each assigned drone
       return assignedDrones.map(drone => (
         <MovingMarker 
           key={`moving-drone-${drone.id}`}
           drone={drone}
           path={path}
+          mission={mission}
           isActive={true}
-          speed={drone.speed || 10} // Use drone speed if available, otherwise default to 10 m/s
+          speed={calculatedSpeed}
         />
       ));
     }).filter(Boolean).flat();
@@ -473,16 +587,31 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
       
       const pathPositions = mission.waypoints.map(wp => [wp.lat, wp.lng] as [number, number]);
       
+      // Add animation and styling for currently active missions vs. completed ones
+      const isActive = mission.status === 'in-progress';
+      const className = isActive ? 'mission-path-active' : '';
+      
       return (
         <Polyline 
           key={`mission-path-${mission.id}`}
           positions={pathPositions}
+          className={className}
           pathOptions={{ 
-            color: '#FF9800',
-            weight: 3,
-            opacity: 0.7
+            color: isActive ? '#FF9800' : '#4CAF50',
+            weight: isActive ? 4 : 3,
+            opacity: isActive ? 0.8 : 0.6,
+            lineCap: 'round',
+            lineJoin: 'round',
+            dashArray: isActive ? '5, 10' : '',
           }}
-        />
+        >
+          <Tooltip direction="top" sticky>
+            <div className="p-1 text-xs font-medium">
+              <span className="font-bold">{mission.name}</span>
+              {isActive && <span className="ml-1 text-orange-500">(Active)</span>}
+            </div>
+          </Tooltip>
+        </Polyline>
       );
     }).filter(Boolean);
   }, [activeMissions]);
