@@ -10,7 +10,7 @@ import {
   insertDroneAssignmentSchema,
   insertMissionResultSchema,
   waypointSchema
-} from "@shared/schema";
+} from "../shared/schema";
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req: any, res: any, next: any) {

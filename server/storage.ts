@@ -5,7 +5,7 @@ import {
   DroneAssignment, InsertDroneAssignment,
   MissionResult, InsertMissionResult,
   Location, Waypoint
-} from "@shared/schema";
+} from "../shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 

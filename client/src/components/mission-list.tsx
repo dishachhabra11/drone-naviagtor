@@ -1,4 +1,4 @@
-import { Mission, Drone } from "@shared/schema";
+import { Mission, Drone } from "../../shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
 import { MapComponent } from "./map-component";
-import { DroneAssignment } from "@shared/schema";
+import { DroneAssignment } from "../../shared/schema";
 import { BatteryIndicator } from "@/components/ui/battery-indicator";
 
 interface MissionListProps {
