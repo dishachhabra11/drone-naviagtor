@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -33,7 +33,7 @@ export const missions = pgTable("missions", {
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
   estimatedDuration: integer("estimated_duration"),
-  pathDistance: float("path_distance"),
+  pathDistance: real("path_distance"),
   organizationId: integer("organization_id").notNull().references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -82,6 +82,8 @@ export const insertMissionSchema = createInsertSchema(missions).pick({
   location: true,
   startTime: true,
   endTime: true,
+  estimatedDuration: true,
+  pathDistance: true,
   organizationId: true,
 });
 
@@ -112,17 +114,29 @@ export const waypointSchema = z.object({
   lat: z.number(),
   lng: z.number(),
   altitude: z.number().optional(),
+  distanceFromPrevious: z.number().optional(), // Distance in meters from previous waypoint
+  distanceFromStart: z.number().optional(),    // Cumulative distance from mission start
+  estimatedTimeFromPrevious: z.number().optional(), // Time in seconds from previous waypoint
+  estimatedTimeFromStart: z.number().optional(),    // Cumulative time from mission start
 });
 
 // Type exports
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 
-export type Drone = typeof drones.$inferSelect;
+export type Drone = typeof drones.$inferSelect & {
+  // Extended drone properties for the frontend
+  assignedMissionId?: number;  // Currently assigned mission ID
+  speed?: number;              // Drone speed in meters per second
+};
 export type InsertDrone = z.infer<typeof insertDroneSchema>;
 export type DroneStatus = "available" | "in-mission" | "maintenance";
 
-export type Mission = typeof missions.$inferSelect;
+export type Mission = typeof missions.$inferSelect & {
+  // Extended mission properties for the frontend
+  waypoints?: Waypoint[];      // Array of mission waypoints
+  assignedDrones?: number[];   // IDs of drones assigned to this mission
+};
 export type InsertMission = z.infer<typeof insertMissionSchema>;
 export type MissionStatus = "planned" | "in-progress" | "completed" | "failed";
 

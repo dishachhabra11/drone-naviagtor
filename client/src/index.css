@@ -55,6 +55,44 @@
   z-index: 800 !important;
 }
 
+/* Moving drone animations */
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+}
+
+/* Give moving drones a higher z-index */
+.custom-drone-icon-moving {
+  z-index: 950 !important;
+}
+
+/* Tooltip styles for drone labels */
+.leaflet-tooltip {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  border: none !important;
+  color: white !important;
+  font-weight: bold !important;
+  padding: 4px 8px !important;
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: rgba(0, 0, 0, 0.7) !important;
+}
+
 @layer base {
   * {
     @apply border-border;
