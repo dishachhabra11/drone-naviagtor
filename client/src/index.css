@@ -2,6 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom styles for Leaflet components */
+.leaflet-popup {
+  z-index: 1000 !important; /* Higher z-index to ensure popups appear above map */
+}
+
+.leaflet-popup-content-wrapper {
+  z-index: 1001 !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+.leaflet-popup-tip {
+  z-index: 1001 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-popup-close-button {
+  z-index: 1002 !important;
+  color: #666 !important;
+  opacity: 0.8 !important;
+  transition: all 0.2s ease !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+/* Custom styling for the popup class we added */
+.custom-popup .leaflet-popup-content-wrapper {
+  background-color: white !important;
+  color: #333 !important;
+}
+
+/* Ensure markers are clickable */
+.leaflet-marker-icon {
+  z-index: 900 !important;
+}
+
+/* Ensure controls are still accessible */
+.leaflet-control {
+  z-index: 800 !important;
+}
+
 @layer base {
   * {
     @apply border-border;

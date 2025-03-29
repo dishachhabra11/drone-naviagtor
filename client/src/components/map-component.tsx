@@ -1,18 +1,21 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Drone, Mission, Waypoint, locationSchema } from "@shared/schema";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Fix the Leaflet icon issue
 // This is necessary for proper Leaflet functionality in React
+// @ts-ignore
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
+
+// We'll apply the styles directly to each popup to avoid TypeScript issues
 
 interface MapComponentProps {
   drones: Drone[];
@@ -110,12 +113,27 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
             position={[location.lat, location.lng]} 
             icon={droneIcon}
           >
-            <Popup>
-              <div>
-                <strong>{drone.name}</strong><br/>
-                {drone.model}<br/>
-                Status: {drone.status}<br/>
-                Battery: {drone.batteryLevel}%
+            <Popup className="custom-popup" minWidth={200} maxWidth={300} closeButton={true} autoPan={true} autoPanPadding={[50, 50] as [number, number]}>
+              <div className="p-3">
+                <h4 className="text-lg font-bold mb-1">{drone.name}</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <span className="text-gray-500">Model:</span>
+                  <span className="font-medium">{drone.model}</span>
+                  
+                  <span className="text-gray-500">Status:</span>
+                  <span className={`font-medium ${
+                    drone.status === 'available' ? 'text-green-600' : 
+                    drone.status === 'in-mission' ? 'text-orange-500' : 
+                    'text-red-500'
+                  }`}>{drone.status}</span>
+                  
+                  <span className="text-gray-500">Battery:</span>
+                  <span className={`font-medium ${
+                    drone.batteryLevel > 70 ? 'text-green-600' : 
+                    drone.batteryLevel > 30 ? 'text-orange-500' : 
+                    'text-red-500'
+                  }`}>{drone.batteryLevel}%</span>
+                </div>
               </div>
             </Popup>
           </Marker>
@@ -156,8 +174,20 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
           position={[wp.lat, wp.lng]} 
           icon={waypointIcon}
         >
-          <Popup>
-            Waypoint {index + 1}: {wp.altitude || 'Default'}m altitude
+          <Popup className="custom-popup" minWidth={200} maxWidth={300} closeButton={true} autoPan={true} autoPanPadding={[50, 50] as [number, number]}>
+            <div className="p-3">
+              <h4 className="text-lg font-bold mb-1">Waypoint {index + 1}</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <span className="text-gray-500">Altitude:</span>
+                <span className="font-medium">{wp.altitude || 'Default'}m</span>
+                
+                <span className="text-gray-500">Latitude:</span>
+                <span className="font-medium">{wp.lat.toFixed(6)}</span>
+                
+                <span className="text-gray-500">Longitude:</span>
+                <span className="font-medium">{wp.lng.toFixed(6)}</span>
+              </div>
+            </div>
           </Popup>
         </Marker>
       );
