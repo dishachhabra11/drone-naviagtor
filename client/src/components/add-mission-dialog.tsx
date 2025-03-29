@@ -22,11 +22,16 @@ const missionFormSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
   location: z.string().min(2, "Location must be at least 2 characters"),
-  status: z.string(),
+  status: z.enum(["planned", "in-progress", "completed", "failed"]).default("planned"),
   isRecurring: z.boolean().default(false),
   recurringSchedule: z.string().optional(),
+  
+  // Date and time fields for scheduling
   startDate: z.date().optional(),
+  startTime: z.string().optional(),
   endDate: z.date().optional(),
+  endTime: z.string().optional(),
+  
   selectedDrones: z.array(z.number()).min(1, "You must select at least one drone"),
 });
 
@@ -53,6 +58,10 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
       status: "planned",
       isRecurring: false,
       recurringSchedule: "",
+      startDate: undefined,
+      startTime: "",
+      endDate: undefined,
+      endTime: "",
       selectedDrones: [],
     },
   });
@@ -98,10 +107,39 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
   });
   
   function onSubmit(values: MissionFormValues) {
-    const { selectedDrones, ...missionData } = values;
+    const { selectedDrones, startDate, endDate, startTime, endTime, ...otherData } = values;
     
+    // Process start time and end time
+    let combinedStartTime: Date | undefined;
+    let combinedEndTime: Date | undefined;
+    
+    if (startDate && startTime) {
+      // Combine date and time into a single Date object
+      const [hours, minutes] = startTime.split(':').map(Number);
+      combinedStartTime = new Date(startDate);
+      combinedStartTime.setHours(hours, minutes);
+    }
+    
+    if (endDate && endTime) {
+      // Combine date and time into a single Date object
+      const [hours, minutes] = endTime.split(':').map(Number);
+      combinedEndTime = new Date(endDate);
+      combinedEndTime.setHours(hours, minutes);
+    }
+    
+    // Create mission data with correct types
     const mission: InsertMission = {
-      ...missionData,
+      name: otherData.name,
+      status: otherData.status,
+      description: otherData.description,
+      startTime: combinedStartTime,
+      endTime: combinedEndTime,
+      // Store location and recurring data in JSON location field
+      location: JSON.stringify({
+        address: otherData.location,
+        isRecurring: otherData.isRecurring,
+        recurringSchedule: otherData.recurringSchedule || null
+      }),
       organizationId: user?.id || 0,
     };
     
@@ -230,7 +268,8 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
               <AccordionItem value="schedule">
                 <AccordionTrigger>Schedule</AccordionTrigger>
                 <AccordionContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <h3 className="font-medium text-sm mb-2">Mission Launch Time</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border rounded-md p-4 bg-muted/30">
                     <FormField
                       control={form.control}
                       name="startDate"
@@ -255,6 +294,29 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                     
                     <FormField
                       control={form.control}
+                      name="startTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Time</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="time" 
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Time to launch the mission
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <h3 className="font-medium text-sm mb-2">Mission End Time (Optional)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-md p-4 bg-muted/30">
+                    <FormField
+                      control={form.control}
                       name="endDate"
                       render={({ field }) => (
                         <FormItem>
@@ -270,6 +332,26 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                               }}
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="endTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Time</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="time" 
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Expected mission completion time
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
