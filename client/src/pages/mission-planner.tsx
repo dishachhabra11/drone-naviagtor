@@ -28,6 +28,10 @@ const missionFormSchema = z.object({
   location: z.string().min(1, {
     message: "Please provide a location name.",
   }),
+  startDate: z.date().optional(),
+  startTime: z.string().optional(),
+  endDate: z.date().optional(),
+  endTime: z.string().optional(),
   isRecurring: z.boolean().default(false),
   recurringSchedule: z.string().optional(),
   selectedDrones: z.array(z.number()).min(1, {
@@ -64,6 +68,10 @@ export default function MissionPlanner() {
       name: "",
       description: "",
       location: "",
+      startDate: undefined,
+      startTime: "",
+      endDate: undefined,
+      endTime: "",
       isRecurring: false,
       recurringSchedule: "",
       selectedDrones: [],
@@ -90,7 +98,7 @@ export default function MissionPlanner() {
           droneId,
           missionId: mission.id,
           waypoints,
-          completed: false,
+          isActive: true,
         };
         
         try {
@@ -125,14 +133,39 @@ export default function MissionPlanner() {
       return;
     }
     
+    // Process start date and time
+    let combinedStartTime = undefined;
+    if (values.startDate) {
+      combinedStartTime = new Date(values.startDate);
+      if (values.startTime) {
+        const [hours, minutes] = values.startTime.split(':').map(Number);
+        combinedStartTime.setHours(hours, minutes);
+      }
+    }
+    
+    // Process end date and time
+    let combinedEndTime = undefined;
+    if (values.endDate) {
+      combinedEndTime = new Date(values.endDate);
+      if (values.endTime) {
+        const [hours, minutes] = values.endTime.split(':').map(Number);
+        combinedEndTime.setHours(hours, minutes);
+      }
+    }
+    
+    // Create the mission data
     const missionData: InsertMission = {
       name: values.name,
       description: values.description || "",
-      location: values.location,
       status: 'planned',
-      startDate: new Date(),
-      isRecurring: values.isRecurring,
-      recurringSchedule: values.isRecurring ? values.recurringSchedule : undefined,
+      // Store location and recurring data in JSON location field
+      location: JSON.stringify({
+        address: values.location,
+        isRecurring: values.isRecurring,
+        recurringSchedule: values.isRecurring ? values.recurringSchedule : null
+      }),
+      startTime: combinedStartTime,
+      endTime: combinedEndTime,
       organizationId: user!.id,
     };
     
@@ -286,11 +319,101 @@ export default function MissionPlanner() {
                       <AccordionItem value="schedule">
                         <AccordionTrigger>Schedule</AccordionTrigger>
                         <AccordionContent>
+                          <h3 className="font-medium text-sm mb-2">Mission Launch Time</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border rounded-md p-4 bg-muted/30">
+                            <FormField
+                              control={form.control}
+                              name="startDate"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Start Date</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="date" 
+                                      onChange={(e) => {
+                                        const date = e.target.valueAsDate;
+                                        if (date) {
+                                          field.onChange(date);
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={form.control}
+                              name="startTime"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Start Time</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="time" 
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    Time to launch the mission
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <h3 className="font-medium text-sm mb-2">Mission End Time (Optional)</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-md p-4 bg-muted/30">
+                            <FormField
+                              control={form.control}
+                              name="endDate"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>End Date</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="date" 
+                                      onChange={(e) => {
+                                        const date = e.target.valueAsDate;
+                                        if (date) {
+                                          field.onChange(date);
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={form.control}
+                              name="endTime"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>End Time</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="time" 
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    Expected mission completion time
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                                  
                           <FormField
                             control={form.control}
                             name="isRecurring"
                             render={({ field }) => (
-                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-4">
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-4">
                                 <FormControl>
                                   <Checkbox
                                     checked={field.value}
@@ -312,7 +435,7 @@ export default function MissionPlanner() {
                               control={form.control}
                               name="recurringSchedule"
                               render={({ field }) => (
-                                <FormItem>
+                                <FormItem className="mt-4">
                                   <FormLabel>Schedule Pattern</FormLabel>
                                   <Select
                                     onValueChange={field.onChange}
@@ -330,6 +453,9 @@ export default function MissionPlanner() {
                                       <SelectItem value="monthly">Monthly</SelectItem>
                                     </SelectContent>
                                   </Select>
+                                  <FormDescription>
+                                    How often this mission should repeat
+                                  </FormDescription>
                                   <FormMessage />
                                 </FormItem>
                               )}
