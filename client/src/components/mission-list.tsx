@@ -33,21 +33,21 @@ export function MissionList({
 }: MissionListProps) {
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  
+
   // Fetch drone assignments if we have a selected mission
   const { data: assignments } = useQuery<DroneAssignment[]>({
     queryKey: ["/api/missions", selectedMission?.id, "assignments"],
     enabled: !!selectedMission,
   });
-  
+
   // Get the assigned drones for the selected mission
   const assignedDrones = assignments
     ? drones.filter(drone => assignments.some(a => a.droneId === drone.id))
     : [];
-  
+
   // Limit the number of missions shown if limit is specified
   const displayMissions = limit ? missions.slice(0, limit) : missions;
-  
+
   const handleViewDetails = (mission: Mission) => {
     setSelectedMission(mission);
     setDetailsDialogOpen(true);
@@ -89,17 +89,27 @@ export function MissionList({
               {displayMissions.map((mission) => (
                 <div key={mission.id} className="p-4">
                   <div className="flex justify-between">
-                    <h3 className="font-medium text-gray-800">{mission.name}</h3>
+                    <div>
+                      <h3 className="font-medium text-gray-800">{mission.name}</h3>
+                      {mission.startTime && (
+                        <p className="text-sm text-gray-500">
+                          Scheduled: {new Date(mission.startTime).toLocaleString()}
+                          {mission.estimatedDuration && (
+                            <span> ({Math.round(mission.estimatedDuration / 60)} mins)</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
                     <StatusBadge status={mission.status} />
                   </div>
                   <p className="text-sm text-gray-500 mt-1">{mission.description || mission.location}</p>
-                  
+
                   <div className="mt-2 text-xs text-gray-500 flex items-center">
                     <Calendar className="h-3 w-3 mr-1" />
                     {mission.startDate 
                       ? format(new Date(mission.startDate), "MMM d, yyyy")
                       : "Not scheduled"}
-                    
+
                     {mission.isRecurring && (
                       <span className="ml-2">
                         <Clock className="h-3 w-3 inline mr-1" />
@@ -107,7 +117,7 @@ export function MissionList({
                       </span>
                     )}
                   </div>
-                  
+
                   <div className="mt-3 flex items-center justify-between">
                     <div className="flex -space-x-2">
                       {drones.filter(drone => drone.status === 'in-mission').slice(0, 3).map((drone) => (
@@ -120,7 +130,7 @@ export function MissionList({
                         </div>
                       ))}
                     </div>
-                    
+
                     {showDetails ? (
                       <Button 
                         variant="ghost" 
@@ -143,7 +153,7 @@ export function MissionList({
               ))}
             </div>
           )}
-          
+
           {showViewAll && missions.length > 0 && (
             <div className="p-4 border-t border-gray-100">
               <Link href="/missions">
@@ -155,7 +165,7 @@ export function MissionList({
           )}
         </CardContent>
       </Card>
-      
+
       {/* Mission Details Dialog */}
       {selectedMission && (
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
@@ -169,7 +179,7 @@ export function MissionList({
                 {selectedMission.description || "No description provided"}
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h4 className="font-medium text-sm mb-2">Mission Details</h4>
@@ -178,7 +188,7 @@ export function MissionList({
                     <MapPin className="h-4 w-4 mr-2 text-gray-500" />
                     <span>{selectedMission.location || "No location specified"}</span>
                   </div>
-                  
+
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2 text-gray-500" />
                     <span>
@@ -187,7 +197,7 @@ export function MissionList({
                         : "Not scheduled"}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 mr-2 text-gray-500" />
                     <span>
@@ -196,13 +206,13 @@ export function MissionList({
                         : "One-time mission"}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center">
                     <Users className="h-4 w-4 mr-2 text-gray-500" />
                     <span>{assignedDrones.length} Assigned Drones</span>
                   </div>
                 </div>
-                
+
                 {assignedDrones.length > 0 && (
                   <>
                     <h4 className="font-medium text-sm mt-4 mb-2">Assigned Drones</h4>
@@ -228,7 +238,7 @@ export function MissionList({
                   </>
                 )}
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-sm mb-2">Mission Map</h4>
                 <div className="h-[300px] border rounded overflow-hidden">
@@ -240,7 +250,7 @@ export function MissionList({
                 </div>
               </div>
             </div>
-            
+
             <div className="flex justify-end space-x-2 mt-4">
               <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
                 Close

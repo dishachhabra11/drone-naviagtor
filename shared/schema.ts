@@ -32,6 +32,8 @@ export const missions = pgTable("missions", {
   location: jsonb("location").notNull(),
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
+  estimatedDuration: integer("estimated_duration"),
+  pathDistance: float("path_distance"),
   organizationId: integer("organization_id").notNull().references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
 });

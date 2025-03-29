@@ -3,6 +3,36 @@ import { Drone, Mission, Waypoint, locationSchema } from "@shared/schema";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { OpenStreetMapProvider } from 'leaflet-geosearch';
+
+const provider = new OpenStreetMapProvider();
+
+function calculatePathDistance(waypoints: Waypoint[]): number {
+  let distance = 0;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const p1 = L.latLng(waypoints[i].lat, waypoints[i].lng);
+    const p2 = L.latLng(waypoints[i + 1].lat, waypoints[i + 1].lng);
+    distance += p1.distanceTo(p2);
+  }
+  return distance;
+}
+
+function calculateEstimatedDuration(distance: number, speed: number = 10): number {
+  // Assuming speed in meters per second, returns duration in seconds
+  return Math.ceil(distance / speed);
+}
+
+function MovingMarker({ position, path, isActive }: { position: L.LatLng, path: L.LatLng[], isActive: boolean }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (isActive && path.length > 0) {
+      map.fitBounds(L.latLngBounds(path));
+    }
+  }, [isActive, path]);
+
+  return isActive ? <Marker position={position} /> : null;
+}
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Fix the Leaflet icon issue
@@ -26,7 +56,10 @@ interface MapComponentProps {
 }
 
 // Component to handle map clicks for waypoint planning
-function MapClickHandler({ onWaypointAdded }: { onWaypointAdded?: (latlng: L.LatLng) => void }) {
+function MapClickHandler({ onWaypointAdded, onSearch }: { 
+  onWaypointAdded?: (latlng: L.LatLng) => void,
+  onSearch?: (query: string) => void 
+}) {
   const map = useMapEvents({
     click: (e) => {
       if (onWaypointAdded) {
@@ -34,6 +67,24 @@ function MapClickHandler({ onWaypointAdded }: { onWaypointAdded?: (latlng: L.Lat
       }
     },
   });
+
+  const handleSearch = async (query: string) => {
+    const results = await provider.search({ query });
+    if (results.length > 0) {
+      const { x, y } = results[0];
+      map.setView([y, x], 13);
+      if (onWaypointAdded) {
+        onWaypointAdded(L.latLng(y, x));
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (onSearch) {
+      onSearch(handleSearch);
+    }
+  }, [onSearch]);
+
   return null;
 }
 
