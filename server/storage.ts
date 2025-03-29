@@ -8,8 +8,11 @@ import {
 } from "../shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import fs from 'fs';
+import path from 'path';
 
 const MemoryStore = createMemoryStore(session);
+const DATA_FILE = path.join(process.cwd(), 'data.json');
 
 export interface IStorage {
   // Organization operations
@@ -50,7 +53,7 @@ export interface IStorage {
   updateMissionResult(id: number, update: Partial<MissionResult>): Promise<MissionResult | undefined>;
 
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Using any type to avoid TypeScript issues with session.SessionStore
 }
 
 export class MemStorage implements IStorage {
@@ -66,7 +69,7 @@ export class MemStorage implements IStorage {
   currentAssignmentId: number;
   currentResultId: number;
   
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Using any type to avoid TypeScript issues with session.SessionStore
   
   constructor() {
     this.organizations = new Map();
@@ -84,6 +87,60 @@ export class MemStorage implements IStorage {
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // prune expired entries every 24h
     });
+    
+    // Load data from file if it exists
+    this.loadData();
+  }
+  
+  // Save data to persistent file
+  private saveData() {
+    try {
+      const data = {
+        organizations: Array.from(this.organizations.entries()),
+        drones: Array.from(this.drones.entries()),
+        missions: Array.from(this.missions.entries()),
+        droneAssignments: Array.from(this.droneAssignments.entries()),
+        missionResults: Array.from(this.missionResults.entries()),
+        currentOrgId: this.currentOrgId,
+        currentDroneId: this.currentDroneId,
+        currentMissionId: this.currentMissionId,
+        currentAssignmentId: this.currentAssignmentId,
+        currentResultId: this.currentResultId
+      };
+      
+      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+      console.log('Data saved to file');
+    } catch (error) {
+      console.error('Error saving data to file:', error);
+    }
+  }
+  
+  // Load data from persistent file
+  private loadData() {
+    try {
+      if (fs.existsSync(DATA_FILE)) {
+        const fileContent = fs.readFileSync(DATA_FILE, 'utf8');
+        const data = JSON.parse(fileContent);
+        
+        this.organizations = new Map(data.organizations);
+        this.drones = new Map(data.drones);
+        this.missions = new Map(data.missions);
+        this.droneAssignments = new Map(data.droneAssignments);
+        this.missionResults = new Map(data.missionResults);
+        
+        this.currentOrgId = data.currentOrgId;
+        this.currentDroneId = data.currentDroneId;
+        this.currentMissionId = data.currentMissionId;
+        this.currentAssignmentId = data.currentAssignmentId;
+        this.currentResultId = data.currentResultId;
+        
+        console.log('Data loaded from file');
+      } else {
+        console.log('No data file found, starting with empty state');
+      }
+    } catch (error) {
+      console.error('Error loading data from file:', error);
+    }
   }
   
   // Organization methods
@@ -101,6 +158,7 @@ export class MemStorage implements IStorage {
     const id = this.currentOrgId++;
     const newOrg: Organization = { ...organization, id };
     this.organizations.set(id, newOrg);
+    this.saveData();
     return newOrg;
   }
   
@@ -132,6 +190,7 @@ export class MemStorage implements IStorage {
     const id = this.currentDroneId++;
     const newDrone: Drone = { ...drone, id };
     this.drones.set(id, newDrone);
+    this.saveData();
     return newDrone;
   }
   
@@ -141,11 +200,14 @@ export class MemStorage implements IStorage {
     
     const updatedDrone = { ...drone, ...update };
     this.drones.set(id, updatedDrone);
+    this.saveData();
     return updatedDrone;
   }
   
   async deleteDrone(id: number): Promise<boolean> {
-    return this.drones.delete(id);
+    const result = this.drones.delete(id);
+    this.saveData();
+    return result;
   }
   
   // Mission methods
@@ -163,6 +225,7 @@ export class MemStorage implements IStorage {
     const id = this.currentMissionId++;
     const newMission: Mission = { ...mission, id };
     this.missions.set(id, newMission);
+    this.saveData();
     return newMission;
   }
   
@@ -172,11 +235,14 @@ export class MemStorage implements IStorage {
     
     const updatedMission = { ...mission, ...update };
     this.missions.set(id, updatedMission);
+    this.saveData();
     return updatedMission;
   }
   
   async deleteMission(id: number): Promise<boolean> {
-    return this.missions.delete(id);
+    const result = this.missions.delete(id);
+    this.saveData();
+    return result;
   }
   
   // DroneAssignment methods
@@ -194,6 +260,7 @@ export class MemStorage implements IStorage {
     const id = this.currentAssignmentId++;
     const newAssignment: DroneAssignment = { ...assignment, id };
     this.droneAssignments.set(id, newAssignment);
+    this.saveData();
     return newAssignment;
   }
   
@@ -203,11 +270,14 @@ export class MemStorage implements IStorage {
     
     const updatedAssignment = { ...assignment, ...update };
     this.droneAssignments.set(id, updatedAssignment);
+    this.saveData();
     return updatedAssignment;
   }
   
   async deleteDroneAssignment(id: number): Promise<boolean> {
-    return this.droneAssignments.delete(id);
+    const result = this.droneAssignments.delete(id);
+    this.saveData();
+    return result;
   }
   
   // MissionResult methods
@@ -225,6 +295,7 @@ export class MemStorage implements IStorage {
     const id = this.currentResultId++;
     const newResult: MissionResult = { ...result, id };
     this.missionResults.set(id, newResult);
+    this.saveData();
     return newResult;
   }
   
@@ -234,6 +305,7 @@ export class MemStorage implements IStorage {
     
     const updatedResult = { ...result, ...update };
     this.missionResults.set(id, updatedResult);
+    this.saveData();
     return updatedResult;
   }
 }
