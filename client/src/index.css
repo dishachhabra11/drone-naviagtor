@@ -8,7 +8,7 @@
 }
 
 .leaflet-popup-content-wrapper {
-  z-index: 1001 !important;
+  z-index: 1000 !important;
   border-radius: 0.5rem !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
@@ -19,16 +19,17 @@
   margin: 0 !important;
   padding: 0 !important;
   width: 100% !important;
+  z-index: 1000 !important;
 }
 
 .leaflet-popup-tip {
-  z-index: 1001 !important;
+  z-index: 1000 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
 .leaflet-popup-close-button {
-  z-index: 1002 !important;
+  z-index: 1000 !important;
   color: #666 !important;
   opacity: 0.8 !important;
   transition: all 0.2s ease !important;
@@ -43,6 +44,20 @@
 .custom-popup .leaflet-popup-content-wrapper {
   background-color: white !important;
   color: #333 !important;
+  z-index: 1000 !important;
+}
+
+/* All Leaflet popups and tooltips need high z-index */
+.leaflet-pane {
+  z-index: 1000 !important;
+}
+
+.leaflet-popup-pane {
+  z-index: 1000 !important;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 1000 !important;
 }
 
 /* Ensure markers are clickable */
@@ -78,6 +93,7 @@
 
 /* Tooltip styles for drone labels */
 .leaflet-tooltip {
+  z-index: 1000 !important;
   background-color: rgba(0, 0, 0, 0.7) !important;
   border: none !important;
   color: white !important;
