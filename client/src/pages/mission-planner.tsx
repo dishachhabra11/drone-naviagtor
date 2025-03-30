@@ -38,6 +38,7 @@ const missionFormSchema = z.object({
   selectedDrones: z.array(z.number()).min(1, {
     message: "Please select at least one drone.",
   }),
+  launchImmediately: z.boolean().default(false),
 });
 
 type MissionFormValues = z.infer<typeof missionFormSchema>;
@@ -76,6 +77,7 @@ export default function MissionPlanner() {
       isRecurring: false,
       recurringSchedule: "",
       selectedDrones: [],
+      launchImmediately: false,
     },
   });
   
@@ -160,14 +162,15 @@ export default function MissionPlanner() {
     const missionData: InsertMission = {
       name: values.name,
       description: values.description || "",
-      status: 'planned',
+      status: values.launchImmediately ? 'in-progress' : 'planned', // Set to in-progress if launching immediately
       // Store location and recurring data in JSON location field
       location: JSON.stringify({
         address: values.location,
         isRecurring: values.isRecurring,
-        recurringSchedule: values.isRecurring ? values.recurringSchedule : null
+        recurringSchedule: values.isRecurring ? values.recurringSchedule : null,
+        launchImmediately: values.launchImmediately
       }),
-      startTime: combinedStartTime,
+      startTime: values.launchImmediately ? new Date() : combinedStartTime, // Use current time if launching immediately
       endTime: combinedEndTime,
       organizationId: user!.id,
     };
@@ -374,151 +377,182 @@ export default function MissionPlanner() {
                       <AccordionItem value="schedule">
                         <AccordionTrigger>Schedule</AccordionTrigger>
                         <AccordionContent>
-                          <h3 className="font-medium text-sm mb-2">Mission Launch Time</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border rounded-md p-4 bg-muted/30">
-                            <FormField
-                              control={form.control}
-                              name="startDate"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Start Date</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      type="date" 
-                                      onChange={(e) => {
-                                        const date = e.target.valueAsDate;
-                                        if (date) {
-                                          field.onChange(date);
-                                        }
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="startTime"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Start Time</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      type="time" 
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormDescription>
-                                    Time to launch the mission
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          
-                          <h3 className="font-medium text-sm mb-2">Mission End Time (Optional)</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-md p-4 bg-muted/30">
-                            <FormField
-                              control={form.control}
-                              name="endDate"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>End Date</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      type="date" 
-                                      onChange={(e) => {
-                                        const date = e.target.valueAsDate;
-                                        if (date) {
-                                          field.onChange(date);
-                                        }
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="endTime"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>End Time</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      type="time" 
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormDescription>
-                                    Expected mission completion time
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                                  
-                          <FormField
-                            control={form.control}
-                            name="isRecurring"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-4">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                  <FormLabel>Recurring Mission</FormLabel>
-                                  <FormDescription>
-                                    Enable if this mission should repeat on a schedule
-                                  </FormDescription>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                          
-                          {form.watch("isRecurring") && (
-                            <FormField
-                              control={form.control}
-                              name="recurringSchedule"
-                              render={({ field }) => (
-                                <FormItem className="mt-4">
-                                  <FormLabel>Schedule Pattern</FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
+                          {form.watch("launchImmediately") ? (
+                            <div className="p-4 rounded-md bg-muted text-center">
+                              <p className="text-sm text-muted-foreground">
+                                Scheduling options are disabled when "Launch Immediately" is enabled.
+                              </p>
+                            </div>
+                          ) : (
+                            <>
+                              <h3 className="font-medium text-sm mb-2">Mission Launch Time</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border rounded-md p-4 bg-muted/30">
+                                <FormField
+                                  control={form.control}
+                                  name="startDate"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Start Date</FormLabel>
+                                      <FormControl>
+                                        <Input 
+                                          type="date" 
+                                          onChange={(e) => {
+                                            const date = e.target.valueAsDate;
+                                            if (date) {
+                                              field.onChange(date);
+                                            }
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <FormField
+                                  control={form.control}
+                                  name="startTime"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Start Time</FormLabel>
+                                      <FormControl>
+                                        <Input 
+                                          type="time" 
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Time to launch the mission
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                              
+                              <h3 className="font-medium text-sm mb-2">Mission End Time (Optional)</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-md p-4 bg-muted/30">
+                                <FormField
+                                  control={form.control}
+                                  name="endDate"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>End Date</FormLabel>
+                                      <FormControl>
+                                        <Input 
+                                          type="date" 
+                                          onChange={(e) => {
+                                            const date = e.target.valueAsDate;
+                                            if (date) {
+                                              field.onChange(date);
+                                            }
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <FormField
+                                  control={form.control}
+                                  name="endTime"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>End Time</FormLabel>
+                                      <FormControl>
+                                        <Input 
+                                          type="time" 
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Expected mission completion time
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                                      
+                              <FormField
+                                control={form.control}
+                                name="isRecurring"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-4">
                                     <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select schedule" />
-                                      </SelectTrigger>
+                                      <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                      />
                                     </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="daily">Daily</SelectItem>
-                                      <SelectItem value="weekly">Weekly</SelectItem>
-                                      <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                                      <SelectItem value="monthly">Monthly</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription>
-                                    How often this mission should repeat
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
+                                    <div className="space-y-1 leading-none">
+                                      <FormLabel>Recurring Mission</FormLabel>
+                                      <FormDescription>
+                                        Enable if this mission should repeat on a schedule
+                                      </FormDescription>
+                                    </div>
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              {form.watch("isRecurring") && (
+                                <FormField
+                                  control={form.control}
+                                  name="recurringSchedule"
+                                  render={({ field }) => (
+                                    <FormItem className="mt-4">
+                                      <FormLabel>Schedule Pattern</FormLabel>
+                                      <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value}
+                                      >
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select schedule" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          <SelectItem value="daily">Daily</SelectItem>
+                                          <SelectItem value="weekly">Weekly</SelectItem>
+                                          <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                                          <SelectItem value="monthly">Monthly</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <FormDescription>
+                                        How often this mission should repeat
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
                               )}
-                            />
+                            </>
                           )}
                         </AccordionContent>
                       </AccordionItem>
                     </Accordion>
+                    
+                    <FormField
+                      control={form.control}
+                      name="launchImmediately"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-4">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Launch Immediately</FormLabel>
+                            <FormDescription>
+                              Enable to start the mission as soon as it's created, using current drone location
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
                     
                     <div className="pt-4">
                       <Button 

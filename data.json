@@ -58,6 +58,40 @@
         "organizationId": 1,
         "id": 3
       }
+    ],
+    [
+      4,
+      {
+        "name": "airtel",
+        "model": "iop",
+        "status": "in-mission",
+        "batteryLevel": 100,
+        "lastKnownLocation": {
+          "lat": 34.0506,
+          "lng": -118.2437,
+          "altitude": 100
+        },
+        "organizationId": 1,
+        "id": 4,
+        "createdAt": "2025-03-30T15:48:17.907Z"
+      }
+    ],
+    [
+      5,
+      {
+        "name": "wednei",
+        "model": "jebf",
+        "status": "available",
+        "batteryLevel": 100,
+        "lastKnownLocation": {
+          "lat": 34.053709,
+          "lng": -118.2437,
+          "altitude": 100
+        },
+        "organizationId": 1,
+        "id": 5,
+        "createdAt": "2025-03-30T15:49:22.135Z"
+      }
     ]
   ],
   "missions": [
@@ -150,6 +184,23 @@
         "pathDistance": null,
         "waypoints": []
       }
+    ],
+    [
+      4,
+      {
+        "name": "gogomission",
+        "description": "missio",
+        "status": "in-progress",
+        "location": "{\"address\":\"indore\",\"isRecurring\":false,\"recurringSchedule\":null,\"launchImmediately\":true}",
+        "startTime": "2025-03-30T15:48:48.756Z",
+        "organizationId": 1,
+        "id": 4,
+        "createdAt": "2025-03-30T15:48:51.448Z",
+        "endTime": null,
+        "estimatedDuration": null,
+        "pathDistance": null,
+        "waypoints": []
+      }
     ]
   ],
   "droneAssignments": [
@@ -230,12 +281,23 @@
         "createdAt": "2025-03-30T15:39:08.887Z",
         "isActive": true
       }
+    ],
+    [
+      4,
+      {
+        "droneId": 4,
+        "missionId": 4,
+        "waypoints": [],
+        "id": 4,
+        "createdAt": "2025-03-30T15:48:51.723Z",
+        "isActive": true
+      }
     ]
   ],
   "missionResults": [],
   "currentOrgId": 2,
-  "currentDroneId": 4,
-  "currentMissionId": 4,
-  "currentAssignmentId": 4,
+  "currentDroneId": 6,
+  "currentMissionId": 5,
+  "currentAssignmentId": 5,
   "currentResultId": 1
 }
