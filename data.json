@@ -8,6 +8,26 @@
         "password": "ba88b47dfc4f0571d4afc3c1f5f34d0c6b9e4702d13177601323de50a1ac4934858c59cf41f0a37bb71ed07ac330ed967acb5cccb780bfaa4b3132516c79236f.44193811772ddbfa7d11166f991e08b3",
         "id": 1
       }
+    ],
+    [
+      2,
+      {
+        "name": "bjssjdbc",
+        "email": "dishachhabra177@gmail.com",
+        "password": "2c6bb70fd4e8b2d184959b59e1f6a64b362493375cb336ac215bc95a848fda677cb5b76ef2c9b65f84735343da61f849a304411c8d61b5b6b9ec4c864effc7c0.85124a34423965994c2de072282dbb36",
+        "id": 2,
+        "createdAt": "2025-03-30T16:02:51.300Z"
+      }
+    ],
+    [
+      3,
+      {
+        "name": "ariel",
+        "email": "dishachhabra210211@acropolis.in",
+        "password": "7461befdda21c188f919fd8ba6b67aeac5a96d205b890e358e05fe0e9a27dbe10c78a702ff7bfccc7a4e20e8806509255b8f768fc4413e1c3e50e32c1ecf163b.da4c6b62f4f8a47ddf968aad450cc66b",
+        "id": 3,
+        "createdAt": "2025-03-30T16:03:18.689Z"
+      }
     ]
   ],
   "drones": [
@@ -216,7 +236,38 @@
         "endTime": null,
         "estimatedDuration": null,
         "pathDistance": null,
-        "waypoints": []
+        "waypoints": [
+          {
+            "lat": 34.05290204643932,
+            "lng": -118.24285267230167,
+            "altitude": 50
+          },
+          {
+            "lat": 34.056597753132294,
+            "lng": -118.23500096578918,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05290204643932,
+            "lng": -118.22905661400722,
+            "altitude": 50
+          },
+          {
+            "lat": 34.04774910954138,
+            "lng": -118.2347218510994,
+            "altitude": 50
+          },
+          {
+            "lat": 34.051622725814354,
+            "lng": -118.23832700197622,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05258221809295,
+            "lng": -118.24240425594408,
+            "altitude": 50
+          }
+        ]
       }
     ]
   ],
@@ -354,7 +405,7 @@
     ]
   ],
   "missionResults": [],
-  "currentOrgId": 2,
+  "currentOrgId": 4,
   "currentDroneId": 6,
   "currentMissionId": 6,
   "currentAssignmentId": 6,

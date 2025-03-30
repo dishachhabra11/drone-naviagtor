@@ -70,50 +70,14 @@
   z-index: 800 !important;
 }
 
-/* Moving drone animations */
-@keyframes pulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(0.8);
-    opacity: 1;
-  }
-}
-
-/* Throb animation for active drones */
-@keyframes throb {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 61, 0, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(255, 61, 0, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 61, 0, 0);
-  }
-}
-
 /* Give moving drones a higher z-index */
 .custom-drone-icon-moving {
   z-index: 950 !important;
 }
 
-/* Style for animated path */
+/* Style for mission paths - using dashed lines instead of animation */
 .mission-path-active {
-  animation: dash 15s linear infinite;
   stroke-dasharray: 10, 10;
-}
-
-@keyframes dash {
-  to {
-    stroke-dashoffset: -20;
-  }
 }
 
 /* Tooltip styles for drone labels */

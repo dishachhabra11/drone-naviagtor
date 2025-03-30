@@ -176,55 +176,31 @@ function MovingMarker({
   
   const progressPercent = calculateMissionProgress();
   
-  // Create custom drone icon with progress indicator
+  // Create simpler custom drone icon for moving marker - without animations
   const droneIcon = L.divIcon({
     className: 'custom-drone-icon-moving',
     html: `<div style="
+      width: 24px; 
+      height: 24px; 
+      background-color: #FF9800; 
+      border-radius: 50%; 
+      border: 3px solid white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
       position: relative;
-      width: 28px; 
-      height: 28px;
     ">
       <div style="
-        width: 24px; 
-        height: 24px; 
-        background-color: #FF9800; 
-        border-radius: 50%; 
-        border: 3px solid white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 0 8px rgba(0,0,0,0.7);
-        position: relative;
-        z-index: 2;
-        animation: throb 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
-      ">
-        <div style="
-          position: absolute;
-          width: 14px;
-          height: 14px;
-          background-color: #FF3D00;
-          border-radius: 50%;
-          animation: pulse 1.5s infinite;
-          z-index: 3;
-        "></div>
-      </div>
-      ${progressPercent > 0 ? `
-        <div style="
-          position: absolute;
-          top: -8px;
-          left: -8px;
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          background: conic-gradient(#4CAF50 ${progressPercent}%, transparent ${progressPercent}%);
-          clip-path: polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0);
-          opacity: 0.7;
-          z-index: 1;
-        "></div>
-      ` : ''}
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background-color: #FF3D00;
+        border-radius: 50%;
+      "></div>
     </div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   });
   
   return (
@@ -725,7 +701,7 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
             opacity: isActive ? 0.8 : 0.6,
             lineCap: 'round',
             lineJoin: 'round',
-            dashArray: isActive ? '5, 10' : '',
+            dashArray: isActive ? '5, 5' : '',
           }}
         >
           <Tooltip direction="top" sticky>
