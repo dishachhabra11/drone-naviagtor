@@ -15,168 +15,60 @@ const provider = new OpenStreetMapProvider();
 
 /**
  * Moving marker component for active drone missions
- * Shows a drone moving along its path during missions with speed based on mission duration
+ * Simply shows the drone at its current position - no client-side animation
  */
 function MovingMarker({ 
   drone, 
   path, 
-  isActive,
-  mission,
-  speed = 10 // meters per second (default)
+  mission
 }: { 
   drone: Drone, 
   path: L.LatLng[], 
-  isActive: boolean,
-  mission?: Mission,
-  speed?: number 
+  mission?: Mission
 }) {
   // Debug logging to check what's happening with the moving marker
-  console.log(`MovingMarker - Drone ${drone.id} (${drone.name}): isActive=${isActive}, path length=${path.length}, mission status=${mission?.status}, assignedMissionId=${drone.assignedMissionId}`);
+  console.log(`MovingMarker - Drone ${drone.id} (${drone.name}): status=${drone.status}, assignedMissionId=${drone.assignedMissionId}`);
   const map = useMap();
-  const [position, setPosition] = useState<L.LatLng | null>(null);
-  const [segmentIndex, setSegmentIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const animationRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number | null>(null);
-  const missionIdRef = useRef<number | undefined>(mission?.id);
   
-  // Set initial position
-  useEffect(() => {
+  // Get the current location from the drone's lastKnownLocation or use first waypoint as fallback
+  const position = useMemo(() => {
+    if (drone.lastKnownLocation) {
+      try {
+        let location: any = drone.lastKnownLocation;
+        // Parse if string
+        if (typeof location === 'string') {
+          location = JSON.parse(location);
+        }
+        // Ensure we have lat and lng
+        if (location && typeof location.lat === 'number' && typeof location.lng === 'number') {
+          return L.latLng(location.lat, location.lng);
+        }
+      } catch (error) {
+        console.error(`Error parsing drone location for ${drone.name}:`, error);
+      }
+    }
+    
+    // Fallback to path's first point if available
     if (path.length > 0) {
-      setPosition(path[0]);
-      setSegmentIndex(0);
-      setProgress(0);
+      return path[0];
     }
-  }, [path]);
+    
+    return null;
+  }, [drone.lastKnownLocation, path]);
   
-  // Check if mission ID matches the assigned mission
+  // Show the path on the map when this drone is active
   useEffect(() => {
-    // Update mission ID reference when mission changes
-    if (mission?.id) {
-      missionIdRef.current = mission.id;
+    if (position && path.length > 1) {
+      // Fit bounds to show the entire path including the drone's current position
+      const bounds = L.latLngBounds([position, ...path]);
+      map.fitBounds(bounds);
     }
-  }, [mission]);
-
-  // Handle active state change
-  useEffect(() => {
-    // Only activate if either:
-    // 1. The mission ID matches the drone's assigned mission ID, or
-    // 2. The drone is explicitly in "in-mission" status
-    const shouldBeActive = isActive && 
-      path.length > 1 && 
-      (drone.status === 'in-mission' || (drone.assignedMissionId && mission && drone.assignedMissionId === mission.id));
-    
-    console.log(`Drone ${drone.id} animation - shouldBeActive: ${shouldBeActive}, assignedMissionId: ${drone.assignedMissionId}, missionId: ${mission?.id}`);
-    
-    if (shouldBeActive) {
-      // Fit bounds to show the entire path
-      map.fitBounds(L.latLngBounds(path));
-      
-      // Start animation
-      lastTimeRef.current = null;
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      
-      const animate = (time: number) => {
-        if (lastTimeRef.current === null) {
-          lastTimeRef.current = time;
-          animationRef.current = requestAnimationFrame(animate);
-          return;
-        }
-        
-        const deltaTime = time - lastTimeRef.current;
-        lastTimeRef.current = time;
-        
-        // Calculate how far to move based on speed and time
-        const distanceToMove = (speed * deltaTime) / 1000; // m/s * ms / 1000 = meters
-        
-        // Update progress
-        setProgress(prev => {
-          let newProgress = prev + distanceToMove;
-          
-          // Current segment
-          const currentSegment = segmentIndex;
-          if (currentSegment < path.length - 1) {
-            const from = path[currentSegment];
-            const to = path[currentSegment + 1];
-            const segmentLength = from.distanceTo(to);
-            
-            // If we've completed this segment
-            if (newProgress >= segmentLength) {
-              newProgress -= segmentLength;
-              setSegmentIndex(si => Math.min(si + 1, path.length - 2));
-            }
-            
-            // Calculate new position along the segment
-            const ratio = Math.min(newProgress / segmentLength, 1);
-            const newLat = from.lat + (to.lat - from.lat) * ratio;
-            const newLng = from.lng + (to.lng - from.lng) * ratio;
-            setPosition(L.latLng(newLat, newLng));
-          }
-          
-          return newProgress;
-        });
-        
-        // Continue animation if not at the end
-        if (segmentIndex < path.length - 2 || progress < path[segmentIndex].distanceTo(path[segmentIndex + 1])) {
-          animationRef.current = requestAnimationFrame(animate);
-        }
-      };
-      
-      animationRef.current = requestAnimationFrame(animate);
-    } else {
-      // Stop animation
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-    }
-    
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-    };
-  }, [isActive, path, map, segmentIndex, progress, speed, drone.status, drone.assignedMissionId, mission?.id]);
+  }, [map, position, path]);
   
-  if (!isActive || !position) return null;
+  // If drone has no position, don't render
+  if (!position) return null;
   
-  // Calculate mission progress percentage
-  const calculateMissionProgress = () => {
-    if (!mission || !path.length) return 0;
-    
-    // If we're at the end, return 100%
-    if (segmentIndex >= path.length - 1) return 100;
-    
-    // Calculate total distance traveled
-    let totalDistance = 0;
-    for (let i = 0; i < segmentIndex; i++) {
-      totalDistance += path[i].distanceTo(path[i+1]);
-    }
-    
-    // Add the distance traveled in current segment
-    if (segmentIndex < path.length - 1) {
-      const from = path[segmentIndex];
-      const to = path[segmentIndex + 1];
-      const segmentLength = from.distanceTo(to);
-      const ratio = Math.min(progress / segmentLength, 1);
-      totalDistance += segmentLength * ratio;
-    }
-    
-    // Calculate total path distance
-    let pathTotalDistance = 0;
-    for (let i = 0; i < path.length - 1; i++) {
-      pathTotalDistance += path[i].distanceTo(path[i+1]);
-    }
-    
-    return pathTotalDistance > 0 ? (totalDistance / pathTotalDistance) * 100 : 0;
-  };
-  
-  const progressPercent = calculateMissionProgress();
-  
-  // Create simpler custom drone icon for moving marker - without animations
+  // Create drone icon for the active mission
   const droneIcon = L.divIcon({
     className: 'custom-drone-icon-moving',
     html: `<div style="
@@ -206,7 +98,7 @@ function MovingMarker({
   return (
     <Marker position={position} icon={droneIcon}>
       <Tooltip direction="top" permanent>
-        {drone.name}
+        {drone.name} (Active)
       </Tooltip>
     </Marker>
   );
@@ -670,8 +562,6 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
             drone={drone}
             path={path}
             mission={mission}
-            isActive={isActive}
-            speed={calculatedSpeed}
           />
         );
       });

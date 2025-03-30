@@ -9,7 +9,9 @@ import {
   insertMissionSchema, 
   insertDroneAssignmentSchema,
   insertMissionResultSchema,
-  waypointSchema
+  waypointSchema,
+  Drone,
+  Mission
 } from "../shared/schema";
 
 // Middleware to check if user is authenticated
@@ -30,6 +32,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup WebSocket server for real-time updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
+  // Map to store active mission simulations
+  // Key: missionId, Value: { intervalId, activeDrones: [droneIds], currentWaypointIndex, path }
+  const activeMissionSimulations = new Map();
+  
+  // Helper to broadcast drone updates to all connected clients
+  const broadcastDroneUpdate = (drone: Drone) => {
+    if (!drone) return;
+    
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'drone-location-update',
+          drone
+        }));
+      }
+    });
+  };
+  
+  // Start a drone movement simulation between waypoints for a mission
+  const startDroneSimulation = async (missionId: number, drone: Drone, waypoints: any[]) => {
+    if (!waypoints || waypoints.length < 2) {
+      console.log(`Cannot start simulation for mission ${missionId}: insufficient waypoints`);
+      return;
+    }
+    
+    console.log(`Starting drone simulation for mission ${missionId} with drone ${drone.id} (${drone.name})`);
+    
+    // Convert waypoints to lat/lng path
+    const path = waypoints.map((wp: any) => ({ lat: wp.lat, lng: wp.lng }));
+    
+    // Initialize drone at first waypoint
+    await storage.updateDrone(drone.id, {
+      lastKnownLocation: path[0],
+      status: 'in-mission',
+      assignedMissionId: missionId
+    });
+    
+    // Send initial position update
+    const updatedDrone = await storage.getDrone(drone.id);
+    if (updatedDrone) {
+      broadcastDroneUpdate(updatedDrone);
+    }
+    
+    // Set up the simulation
+    let currentWaypointIndex = 0;
+    let progress = 0;
+    
+    // Create or update mission simulation entry
+    if (!activeMissionSimulations.has(missionId)) {
+      activeMissionSimulations.set(missionId, {
+        activeDrones: [drone.id],
+        currentWaypointIndex,
+        path,
+        intervalId: null as NodeJS.Timeout | null
+      });
+    } else {
+      const sim = activeMissionSimulations.get(missionId);
+      if (!sim.activeDrones.includes(drone.id)) {
+        sim.activeDrones.push(drone.id);
+      }
+    }
+    
+    // Only start the interval if not already running
+    const sim = activeMissionSimulations.get(missionId);
+    if (sim.intervalId === null) {
+      // Update drone positions every 1 second
+      sim.intervalId = setInterval(async () => {
+        const simulation = activeMissionSimulations.get(missionId);
+        if (!simulation) {
+          clearInterval(sim.intervalId);
+          return;
+        }
+        
+        // Current segment
+        const { currentWaypointIndex, path } = simulation;
+        
+        if (currentWaypointIndex >= path.length - 1) {
+          // Reached the end of the path
+          clearInterval(simulation.intervalId);
+          
+          // Update all drones to the final position and mark as available
+          for (const droneId of simulation.activeDrones) {
+            await storage.updateDrone(droneId, {
+              lastKnownLocation: path[path.length - 1],
+              status: 'available',
+              assignedMissionId: undefined
+            });
+            
+            const finalDrone = await storage.getDrone(droneId);
+            if (finalDrone) {
+              broadcastDroneUpdate(finalDrone);
+            }
+          }
+          
+          // Update mission status to completed
+          await storage.updateMission(missionId, { status: 'completed' });
+          
+          // Remove from active simulations
+          activeMissionSimulations.delete(missionId);
+          return;
+        }
+        
+        // Calculate next position (simple incremental movement along path)
+        progress += 0.05; // Move 5% along the current segment each update
+        
+        if (progress >= 1) {
+          // Move to next segment
+          progress = 0;
+          simulation.currentWaypointIndex++;
+          
+          if (simulation.currentWaypointIndex >= path.length - 1) {
+            // We'll handle this in the next iteration
+            return;
+          }
+        }
+        
+        // Calculate position along the current segment
+        const from = path[simulation.currentWaypointIndex];
+        const to = path[simulation.currentWaypointIndex + 1];
+        const newLat = from.lat + (to.lat - from.lat) * progress;
+        const newLng = from.lng + (to.lng - from.lng) * progress;
+        const newLocation = { lat: newLat, lng: newLng };
+        
+        // Update all drones in this mission
+        for (const droneId of simulation.activeDrones) {
+          await storage.updateDrone(droneId, {
+            lastKnownLocation: newLocation
+          });
+          
+          const updatedDrone = await storage.getDrone(droneId);
+          if (updatedDrone) {
+            broadcastDroneUpdate(updatedDrone);
+          }
+        }
+      }, 1000);
+    }
+  };
+  
   // WebSocket connection handler
   wss.on('connection', (ws) => {
     console.log('Client connected to WebSocket');
@@ -40,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Handle different message types
         if (data.type === 'drone-location-update') {
-          // Update drone location and broadcast to all clients
+          // Manual update of drone location
           const { droneId, location } = data;
           const drone = await storage.getDrone(droneId);
           
@@ -49,15 +189,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
               lastKnownLocation: location
             });
             
-            // Broadcast the update to all connected clients
-            wss.clients.forEach((client) => {
-              if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({
-                  type: 'drone-location-update',
-                  drone: updatedDrone
-                }));
-              }
-            });
+            if (updatedDrone) {
+              broadcastDroneUpdate(updatedDrone);
+            }
+          }
+        } else if (data.type === 'start-mission-simulation') {
+          // Start mission simulation from client request
+          const { missionId, droneId } = data;
+          const mission = await storage.getMission(missionId);
+          const drone = await storage.getDrone(droneId);
+          
+          if (mission && drone) {
+            // Get the mission waypoints
+            const assignments = await storage.getDroneAssignmentsByMission(missionId);
+            let waypoints: any[] = [];
+            
+            if (assignments.length > 0 && assignments[0].waypoints && Array.isArray(assignments[0].waypoints)) {
+              waypoints = assignments[0].waypoints;
+            } else if (mission.waypoints && Array.isArray(mission.waypoints)) {
+              waypoints = mission.waypoints;
+            } else {
+              waypoints = []; // Empty array as a fallback
+            }
+            
+            await startDroneSimulation(missionId, drone, waypoints);
           }
         }
       } catch (error) {
