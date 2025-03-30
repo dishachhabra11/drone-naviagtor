@@ -491,8 +491,66 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
   }, [processedWaypoints, missionStats]);
   
   // Check scheduled missions and find ones that should be active based on current time
-  const activeMissions = useMemo(() => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Update current time every minute to check for scheduled missions
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Check for missions that need status updates (planned -> in-progress)
+  useEffect(() => {
     const now = new Date();
+    
+    // Find missions that should be activated
+    const missionsToActivate = missions.filter(mission => 
+      mission.status === 'planned' && 
+      mission.startTime && 
+      new Date(mission.startTime) <= now
+    );
+    
+    // Update mission status to in-progress
+    if (missionsToActivate.length > 0) {
+      missionsToActivate.forEach(async mission => {
+        try {
+          await fetch(`/api/missions/${mission.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: 'in-progress' }),
+          });
+          
+          // Also update assigned drones status
+          const assignedDrones = drones.filter(drone => 
+            drone.assignedMissionId === mission.id && 
+            drone.status === 'available'
+          );
+          
+          assignedDrones.forEach(async drone => {
+            await fetch(`/api/drones/${drone.id}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ status: 'in-mission' }),
+            });
+          });
+          
+          console.log(`Activated mission: ${mission.name}`);
+        } catch (error) {
+          console.error(`Failed to update mission ${mission.id} status:`, error);
+        }
+      });
+    }
+  }, [currentTime, missions, drones]);
+  
+  const activeMissions = useMemo(() => {
+    const now = currentTime;
     return missions.filter(mission => {
       // Already in-progress missions are active
       if (mission.status === 'in-progress') return true;
@@ -505,7 +563,7 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
       
       return false;
     });
-  }, [missions]);
+  }, [missions, currentTime]);
   
   // Calculate the total distance of a mission path
   const calculateTotalPathDistance = (waypoints: Waypoint[]): number => {

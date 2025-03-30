@@ -1,0 +1,89 @@
+{
+  "organizations": [
+    [
+      1,
+      {
+        "name": "skywatch",
+        "email": "dishachhabra173@gmail.com",
+        "password": "ba88b47dfc4f0571d4afc3c1f5f34d0c6b9e4702d13177601323de50a1ac4934858c59cf41f0a37bb71ed07ac330ed967acb5cccb780bfaa4b3132516c79236f.44193811772ddbfa7d11166f991e08b3",
+        "id": 1
+      }
+    ]
+  ],
+  "drones": [
+    [
+      1,
+      {
+        "name": "Public",
+        "model": "DJI-MAVIC",
+        "status": "in-mission",
+        "batteryLevel": 100,
+        "lastKnownLocation": {
+          "lat": 34.0522,
+          "lng": -118.2437,
+          "altitude": 100
+        },
+        "organizationId": 1,
+        "id": 1
+      }
+    ]
+  ],
+  "missions": [
+    [
+      1,
+      {
+        "name": "buildingRealtime1.png",
+        "description": "",
+        "status": "planned",
+        "location": "{\"address\":\"Indore, IN Madhya Pradesh\",\"isRecurring\":false,\"recurringSchedule\":null}",
+        "endTime": "2025-03-30T14:52:00.000Z",
+        "organizationId": 1,
+        "id": 1
+      }
+    ]
+  ],
+  "droneAssignments": [
+    [
+      1,
+      {
+        "droneId": 1,
+        "missionId": 1,
+        "waypoints": [
+          {
+            "lat": 34.06571188961947,
+            "lng": -118.25108812545454,
+            "altitude": 50
+          },
+          {
+            "lat": 34.07395469116494,
+            "lng": -118.21983373928637,
+            "altitude": 50
+          },
+          {
+            "lat": 34.084754389535775,
+            "lng": -118.2414886899742,
+            "altitude": 50
+          },
+          {
+            "lat": 34.07310202474723,
+            "lng": -118.26860384185831,
+            "altitude": 50
+          },
+          {
+            "lat": 34.06372212771874,
+            "lng": -118.25281527240679,
+            "altitude": 50
+          }
+        ],
+        "isActive": true,
+        "id": 1
+      }
+    ]
+  ],
+  "missionResults": [],
+  "currentOrgId": 2,
+  "currentDroneId": 2,
+  "currentMissionId": 2,
+  "currentAssignmentId": 2,
+  "currentResultId": 1
+}
