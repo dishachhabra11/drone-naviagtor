@@ -156,7 +156,11 @@ export class MemStorage implements IStorage {
   
   async createOrganization(organization: InsertOrganization): Promise<Organization> {
     const id = this.currentOrgId++;
-    const newOrg: Organization = { ...organization, id };
+    const newOrg: Organization = { 
+      ...organization, 
+      id,
+      createdAt: new Date() 
+    };
     this.organizations.set(id, newOrg);
     this.saveData();
     return newOrg;
@@ -188,7 +192,14 @@ export class MemStorage implements IStorage {
   
   async createDrone(drone: InsertDrone): Promise<Drone> {
     const id = this.currentDroneId++;
-    const newDrone: Drone = { ...drone, id };
+    const newDrone: Drone = { 
+      ...drone, 
+      id,
+      createdAt: new Date(),
+      status: drone.status || 'available',
+      batteryLevel: drone.batteryLevel || 100,
+      lastKnownLocation: drone.lastKnownLocation || null
+    };
     this.drones.set(id, newDrone);
     this.saveData();
     return newDrone;
@@ -212,18 +223,58 @@ export class MemStorage implements IStorage {
   
   // Mission methods
   async getMission(id: number): Promise<Mission | undefined> {
-    return this.missions.get(id);
+    const mission = this.missions.get(id);
+    if (!mission) return undefined;
+    
+    // Attach waypoints from assignments to the mission data
+    const assignments = await this.getDroneAssignmentsByMission(mission.id);
+    if (assignments.length > 0 && assignments[0].waypoints) {
+      // Convert the waypoints JSON to the expected Waypoint[] type
+      mission.waypoints = Array.isArray(assignments[0].waypoints) 
+        ? assignments[0].waypoints 
+        : [];
+    } else {
+      mission.waypoints = [];
+    }
+    
+    return mission;
   }
   
   async getMissionsByOrganization(organizationId: number): Promise<Mission[]> {
-    return Array.from(this.missions.values()).filter(
+    const missions = Array.from(this.missions.values()).filter(
       (mission) => mission.organizationId === organizationId
     );
+    
+    // Attach waypoints to each mission from its assignments
+    for (const mission of missions) {
+      const assignments = await this.getDroneAssignmentsByMission(mission.id);
+      if (assignments.length > 0 && assignments[0].waypoints) {
+        // Convert the waypoints JSON to the expected Waypoint[] type
+        mission.waypoints = Array.isArray(assignments[0].waypoints) 
+          ? assignments[0].waypoints 
+          : [];
+      } else {
+        mission.waypoints = [];
+      }
+    }
+    
+    return missions;
   }
   
   async createMission(mission: InsertMission): Promise<Mission> {
     const id = this.currentMissionId++;
-    const newMission: Mission = { ...mission, id };
+    const newMission: Mission = { 
+      ...mission, 
+      id,
+      createdAt: new Date(),
+      status: mission.status || 'planned',
+      description: mission.description || null,
+      startTime: mission.startTime || null,
+      endTime: mission.endTime || null,
+      estimatedDuration: mission.estimatedDuration || null,
+      pathDistance: mission.pathDistance || null,
+      waypoints: []
+    };
     this.missions.set(id, newMission);
     this.saveData();
     return newMission;
@@ -258,7 +309,13 @@ export class MemStorage implements IStorage {
   
   async createDroneAssignment(assignment: InsertDroneAssignment): Promise<DroneAssignment> {
     const id = this.currentAssignmentId++;
-    const newAssignment: DroneAssignment = { ...assignment, id };
+    const newAssignment: DroneAssignment = { 
+      ...assignment, 
+      id,
+      createdAt: new Date(),
+      isActive: assignment.isActive !== undefined ? assignment.isActive : true,
+      waypoints: assignment.waypoints || []
+    };
     this.droneAssignments.set(id, newAssignment);
     this.saveData();
     return newAssignment;
@@ -293,7 +350,13 @@ export class MemStorage implements IStorage {
   
   async createMissionResult(result: InsertMissionResult): Promise<MissionResult> {
     const id = this.currentResultId++;
-    const newResult: MissionResult = { ...result, id };
+    const newResult: MissionResult = { 
+      ...result, 
+      id,
+      createdAt: new Date(),
+      data: result.data || null,
+      findings: result.findings || null
+    };
     this.missionResults.set(id, newResult);
     this.saveData();
     return newResult;

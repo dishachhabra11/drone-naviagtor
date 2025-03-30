@@ -26,6 +26,38 @@
         "organizationId": 1,
         "id": 1
       }
+    ],
+    [
+      2,
+      {
+        "name": "disha",
+        "model": "djmaciv",
+        "status": "in-mission",
+        "batteryLevel": 100,
+        "lastKnownLocation": {
+          "lat": 34.0578,
+          "lng": -118.2437,
+          "altitude": 100
+        },
+        "organizationId": 1,
+        "id": 2
+      }
+    ],
+    [
+      3,
+      {
+        "name": "sjbxsj",
+        "model": "kdcbkj",
+        "status": "available",
+        "batteryLevel": 100,
+        "lastKnownLocation": {
+          "lat": 34.0567,
+          "lng": -118.2437,
+          "altitude": 100
+        },
+        "organizationId": 1,
+        "id": 3
+      }
     ]
   ],
   "missions": [
@@ -39,6 +71,18 @@
         "endTime": "2025-03-30T14:52:00.000Z",
         "organizationId": 1,
         "id": 1
+      }
+    ],
+    [
+      2,
+      {
+        "name": "Disha Chhabra",
+        "description": "hawk",
+        "status": "planned",
+        "location": "{\"address\":\"Indore, IN Madhya Pradesh\",\"isRecurring\":false,\"recurringSchedule\":null}",
+        "startTime": "2025-03-30T15:30:00.000Z",
+        "organizationId": 1,
+        "id": 2
       }
     ]
   ],
@@ -78,12 +122,43 @@
         "isActive": true,
         "id": 1
       }
+    ],
+    [
+      2,
+      {
+        "droneId": 2,
+        "missionId": 2,
+        "waypoints": [
+          {
+            "lat": 34.06944036281721,
+            "lng": -118.2779891663356,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05024155429952,
+            "lng": -118.27816088333411,
+            "altitude": 50
+          },
+          {
+            "lat": 34.056214982984656,
+            "lng": -118.24553465361664,
+            "altitude": 50
+          },
+          {
+            "lat": 34.06887157175504,
+            "lng": -118.27610027935194,
+            "altitude": 50
+          }
+        ],
+        "isActive": true,
+        "id": 2
+      }
     ]
   ],
   "missionResults": [],
   "currentOrgId": 2,
-  "currentDroneId": 2,
-  "currentMissionId": 2,
-  "currentAssignmentId": 2,
+  "currentDroneId": 4,
+  "currentMissionId": 3,
+  "currentAssignmentId": 3,
   "currentResultId": 1
 }

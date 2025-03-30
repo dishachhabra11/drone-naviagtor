@@ -30,6 +30,8 @@ function MovingMarker({
   mission?: Mission,
   speed?: number 
 }) {
+  // Debug logging to check what's happening with the moving marker
+  console.log(`MovingMarker - Drone ${drone.id} (${drone.name}): isActive=${isActive}, path length=${path.length}, mission status=${mission?.status}`);
   const map = useMap();
   const [position, setPosition] = useState<L.LatLng | null>(null);
   const [segmentIndex, setSegmentIndex] = useState(0);
@@ -515,9 +517,14 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
     
     // Update mission status to in-progress
     if (missionsToActivate.length > 0) {
-      missionsToActivate.forEach(async mission => {
+      console.log(`Found ${missionsToActivate.length} missions to activate:`, missionsToActivate);
+      
+      // Use Promise.all to wait for all updates to complete
+      Promise.all(missionsToActivate.map(async (mission) => {
         try {
-          await fetch(`/api/missions/${mission.id}`, {
+          console.log(`Activating mission ${mission.id}: ${mission.name}`);
+          
+          const response = await fetch(`/api/missions/${mission.id}`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -525,29 +532,26 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
             body: JSON.stringify({ status: 'in-progress' }),
           });
           
-          // Also update assigned drones status
-          const assignedDrones = drones.filter(drone => 
-            drone.assignedMissionId === mission.id && 
-            drone.status === 'available'
-          );
+          if (!response.ok) {
+            throw new Error(`Failed to update mission status: ${response.statusText}`);
+          }
           
-          assignedDrones.forEach(async drone => {
-            await fetch(`/api/drones/${drone.id}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ status: 'in-mission' }),
+          console.log(`Successfully activated mission: ${mission.name}`);
+          
+          // Force a re-fetch of missions data to update the UI
+          await fetch('/api/missions')
+            .then(res => res.json())
+            .then(data => {
+              console.log('Refreshed missions data:', data);
+              // Manually trigger a check of active missions
+              setCurrentTime(new Date());
             });
-          });
-          
-          console.log(`Activated mission: ${mission.name}`);
         } catch (error) {
           console.error(`Failed to update mission ${mission.id} status:`, error);
         }
-      });
+      }));
     }
-  }, [currentTime, missions, drones]);
+  }, [currentTime, missions]);
   
   const activeMissions = useMemo(() => {
     const now = currentTime;
@@ -580,17 +584,37 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
   };
   
   const activeMissionMarkers = useMemo(() => {
+    // Debugging information
+    console.log(`Active missions count: ${activeMissions.length}`);
+    activeMissions.forEach(mission => {
+      console.log(`Active mission ${mission.id}: ${mission.name} (${mission.status})`);
+      if (mission.waypoints) {
+        console.log(`  Waypoints: ${mission.waypoints.length}`);
+      } else {
+        console.log(`  No waypoints`);
+      }
+    });
+    
     return activeMissions.map(mission => {
       // Skip missions without waypoints
-      if (!mission.waypoints || mission.waypoints.length < 2) return null;
+      if (!mission.waypoints || mission.waypoints.length < 2) {
+        console.log(`Mission ${mission.id} (${mission.name}) skipped: insufficient waypoints`);
+        return null;
+      }
       
       // Find the assigned drone(s) for this mission
-      const assignedDrones = drones.filter(drone => 
-        (drone.status === 'in-mission' || drone.status === 'available') && 
-        drone.assignedMissionId === mission.id
-      );
+      const assignedDrones = drones.filter(drone => {
+        const isAssigned = drone.assignedMissionId === mission.id;
+        console.log(`Checking drone ${drone.id} (${drone.name}): status=${drone.status}, assignedToMission=${isAssigned}`);
+        return isAssigned;
+      });
       
-      if (assignedDrones.length === 0) return null;
+      console.log(`Mission ${mission.id} has ${assignedDrones.length} assigned drones`);
+      
+      if (assignedDrones.length === 0) {
+        console.log(`Mission ${mission.id} (${mission.name}) skipped: no assigned drones`);
+        return null;
+      }
       
       // Create path from waypoints for the moving marker
       const path = mission.waypoints.map(wp => L.latLng(wp.lat, wp.lng));
@@ -623,19 +647,36 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
       // Ensure speed is within reasonable bounds (1-30 m/s)
       calculatedSpeed = Math.max(1, Math.min(30, calculatedSpeed));
       
+      console.log(`Mission ${mission.id} (${mission.name}): Using drone speed of ${calculatedSpeed} m/s`);
+      
+      // Determine if the mission is active
+      const now = new Date();
+      const isPlannedAndStarted = mission.status === 'planned' && 
+                                  mission.startTime && 
+                                  new Date(mission.startTime) <= now;
+      
+      const isActive = (mission.status === 'in-progress' || isPlannedAndStarted) ? true : false;
+      
+      if (!isActive) {
+        console.log(`Mission ${mission.id} (${mission.name}) is not active yet`);
+      }
+      
       // Create a moving marker for each assigned drone
-      return assignedDrones.map(drone => (
-        <MovingMarker 
-          key={`moving-drone-${drone.id}`}
-          drone={drone}
-          path={path}
-          mission={mission}
-          isActive={true}
-          speed={calculatedSpeed}
-        />
-      ));
+      return assignedDrones.map(drone => {
+        console.log(`Creating marker for drone ${drone.id} (${drone.name}) on mission ${mission.id}, active=${isActive}`);
+        return (
+          <MovingMarker 
+            key={`moving-drone-${drone.id}`}
+            drone={drone}
+            path={path}
+            mission={mission}
+            isActive={isActive}
+            speed={calculatedSpeed}
+          />
+        );
+      });
     }).filter(Boolean).flat();
-  }, [activeMissions, drones]);
+  }, [activeMissions, drones, currentTime]);
   
   // Add mission path lines for active missions
   const missionPathLines = useMemo(() => {

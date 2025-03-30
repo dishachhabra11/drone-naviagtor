@@ -216,6 +216,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // PATCH endpoint for partial mission updates
+  app.patch('/api/missions/:id', async (req, res) => {
+    try {
+      const missionId = parseInt(req.params.id);
+      const mission = await storage.getMission(missionId);
+      
+      if (!mission) {
+        return res.status(404).json({ message: 'Mission not found' });
+      }
+      
+      // Allow status updates even from automatic processes without authentication
+      const updatedMission = await storage.updateMission(missionId, req.body);
+      
+      // If we're activating a mission, also update assigned drones
+      if (req.body.status === 'in-progress') {
+        const assignments = await storage.getDroneAssignmentsByMission(missionId);
+        for (const assignment of assignments) {
+          const drone = await storage.getDrone(assignment.droneId);
+          if (drone && drone.status === 'available') {
+            await storage.updateDrone(drone.id, { status: 'in-mission', assignedMissionId: missionId });
+          }
+        }
+      }
+      
+      res.json(updatedMission);
+    } catch (error) {
+      console.error('Mission update error:', error);
+      res.status(400).json({ message: 'Invalid mission data', error });
+    }
+  });
+  
   app.delete('/api/missions/:id', isAuthenticated, async (req, res) => {
     try {
       const missionId = parseInt(req.params.id);
