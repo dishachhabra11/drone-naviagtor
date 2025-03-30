@@ -112,6 +112,42 @@
         "id": 5,
         "createdAt": "2025-03-30T15:49:22.135Z"
       }
+    ],
+    [
+      6,
+      {
+        "name": "nk",
+        "model": "dcwsw",
+        "status": "in-mission",
+        "batteryLevel": 100,
+        "lastKnownLocation": {
+          "lat": 34.05678,
+          "lng": -118.2437,
+          "altitude": 100
+        },
+        "organizationId": 1,
+        "id": 6,
+        "createdAt": "2025-03-30T18:42:36.219Z",
+        "assignedMissionId": 6
+      }
+    ],
+    [
+      7,
+      {
+        "name": "wdbjwe",
+        "model": "efbewij",
+        "status": "in-mission",
+        "batteryLevel": 100,
+        "lastKnownLocation": {
+          "lat": 34.0522,
+          "lng": -118.2437,
+          "altitude": 100
+        },
+        "organizationId": 1,
+        "id": 7,
+        "createdAt": "2025-03-30T18:43:40.342Z",
+        "assignedMissionId": 7
+      }
     ]
   ],
   "missions": [
@@ -269,6 +305,61 @@
           }
         ]
       }
+    ],
+    [
+      6,
+      {
+        "name": "kkkbkj",
+        "description": "vvhhj",
+        "status": "in-progress",
+        "location": "{\"address\":\"jkbj\",\"isRecurring\":false,\"recurringSchedule\":null,\"launchImmediately\":true}",
+        "startTime": "2025-03-30T18:43:06.979Z",
+        "organizationId": 1,
+        "id": 6,
+        "createdAt": "2025-03-30T18:43:07.030Z",
+        "endTime": null,
+        "estimatedDuration": null,
+        "pathDistance": null,
+        "waypoints": []
+      }
+    ],
+    [
+      7,
+      {
+        "name": "haha",
+        "description": "dvjhhahah",
+        "status": "planned",
+        "location": "{\"address\":\"ind\",\"isRecurring\":false,\"recurringSchedule\":null,\"launchImmediately\":false}",
+        "organizationId": 1,
+        "id": 7,
+        "createdAt": "2025-03-30T18:44:15.768Z",
+        "startTime": null,
+        "endTime": null,
+        "estimatedDuration": null,
+        "pathDistance": null,
+        "waypoints": [
+          {
+            "lat": 34.05672507097458,
+            "lng": -118.23040503214472,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05366902194466,
+            "lng": -118.22534218313668,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05693827958607,
+            "lng": -118.22432063900587,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05681566408154,
+            "lng": -118.2301146314865,
+            "altitude": 50
+          }
+        ]
+      }
     ]
   ],
   "droneAssignments": [
@@ -402,12 +493,55 @@
         "id": 5,
         "createdAt": "2025-03-30T15:57:02.721Z"
       }
+    ],
+    [
+      6,
+      {
+        "droneId": 6,
+        "missionId": 6,
+        "waypoints": [],
+        "id": 6,
+        "createdAt": "2025-03-30T18:43:07.056Z",
+        "isActive": true
+      }
+    ],
+    [
+      7,
+      {
+        "droneId": 7,
+        "missionId": 7,
+        "waypoints": [
+          {
+            "lat": 34.05672507097458,
+            "lng": -118.23040503214472,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05366902194466,
+            "lng": -118.22534218313668,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05693827958607,
+            "lng": -118.22432063900587,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05681566408154,
+            "lng": -118.2301146314865,
+            "altitude": 50
+          }
+        ],
+        "isActive": true,
+        "id": 7,
+        "createdAt": "2025-03-30T18:44:15.790Z"
+      }
     ]
   ],
   "missionResults": [],
   "currentOrgId": 4,
-  "currentDroneId": 6,
-  "currentMissionId": 6,
-  "currentAssignmentId": 6,
+  "currentDroneId": 8,
+  "currentMissionId": 8,
+  "currentAssignmentId": 8,
   "currentResultId": 1
 }

@@ -6,33 +6,34 @@ export function createWebSocketConnection(): WebSocket {
   // Determine the correct WebSocket protocol based on current connection
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const wsUrl = `${protocol}//${window.location.host}/ws`;
-  
+
   // Create WebSocket connection
   const socket = new WebSocket(wsUrl);
-  
+
   // Connection opened handler
-  socket.addEventListener('open', () => {
-    console.log('WebSocket connection established');
+  socket.addEventListener("open", () => {
+    console.log("WebSocket connection established");
   });
-  
+
   // Connection error handler
-  socket.addEventListener('error', (error) => {
-    console.error('WebSocket error:', error);
+  socket.addEventListener("error", (error) => {
+    console.error("WebSocket error:", error);
   });
-  
+
   // Connection closed handler
-  socket.addEventListener('close', (event) => {
+  socket.addEventListener("close", (event) => {
     console.log(`WebSocket connection closed with code ${event.code}`);
-    
+
     // Attempt to reconnect after a delay if the connection was closed unexpectedly
-    if (event.code !== 1000) { // 1000 is normal closure
+    if (event.code !== 1000) {
+      // 1000 is normal closure
       setTimeout(() => {
-        console.log('Attempting to reconnect WebSocket...');
+        console.log("Attempting to reconnect WebSocket...");
         createWebSocketConnection();
       }, 5000);
     }
   });
-  
+
   return socket;
 }
 
@@ -42,22 +43,18 @@ export function createWebSocketConnection(): WebSocket {
  * @param droneId The ID of the drone
  * @param location The new location of the drone
  */
-export function sendDroneLocationUpdate(
-  socket: WebSocket, 
-  droneId: number, 
-  location: { lat: number, lng: number }
-): void {
+export function sendDroneLocationUpdate(socket: WebSocket, droneId: number, location: { lat: number; lng: number }): void {
   if (socket.readyState !== WebSocket.OPEN) {
-    console.error('WebSocket is not open. Cannot send drone location update.');
+    console.error("WebSocket is not open. Cannot send drone location update.");
     return;
   }
-  
+
   const message = {
-    type: 'drone-location-update',
+    type: "drone-location-update",
     droneId,
-    location
+    location,
   };
-  
+
   socket.send(JSON.stringify(message));
 }
 
@@ -65,9 +62,9 @@ export function sendDroneLocationUpdate(
  * Type definition for WebSocket message handlers
  */
 export interface WebSocketMessageHandlers {
-  'drone-location-update'?: (data: any) => void;
-  'mission-launched'?: (data: any) => void;
-  'connected'?: (data: any) => void;
+  "drone-location-update"?: (data: any) => void;
+  "mission-launched"?: (data: any) => void;
+  connected?: (data: any) => void;
   [key: string]: ((data: any) => void) | undefined;
 }
 
@@ -76,28 +73,25 @@ export interface WebSocketMessageHandlers {
  * @param socket The WebSocket connection
  * @param handlers Object with handlers for different message types
  */
-export function listenForWebSocketMessages(
-  socket: WebSocket,
-  handlers: WebSocketMessageHandlers
-): () => void {
+export function listenForWebSocketMessages(socket: WebSocket, handlers: WebSocketMessageHandlers): () => void {
   const handleMessage = (event: MessageEvent) => {
     try {
       const data = JSON.parse(event.data);
       const messageType = data.type;
-      
+
       if (messageType && handlers[messageType]) {
         handlers[messageType]!(data);
       }
     } catch (error) {
-      console.error('Error handling WebSocket message:', error);
+      console.error("Error handling WebSocket message:", error);
     }
   };
-  
-  socket.addEventListener('message', handleMessage);
-  
+
+  socket.addEventListener("message", handleMessage);
+
   // Return cleanup function
   return () => {
-    socket.removeEventListener('message', handleMessage);
+    socket.removeEventListener("message", handleMessage);
   };
 }
 
@@ -106,12 +100,9 @@ export function listenForWebSocketMessages(
  * @param socket The WebSocket connection
  * @param onDroneUpdate Callback function to handle drone updates
  */
-export function listenForDroneUpdates(
-  socket: WebSocket,
-  onDroneUpdate: (data: any) => void
-): () => void {
+export function listenForDroneUpdates(socket: WebSocket, onDroneUpdate: (data: any) => void): () => void {
   return listenForWebSocketMessages(socket, {
-    'drone-location-update': onDroneUpdate
+    "drone-location-update": onDroneUpdate,
   });
 }
 
@@ -120,11 +111,8 @@ export function listenForDroneUpdates(
  * @param socket The WebSocket connection
  * @param onMissionLaunched Callback function to handle mission launched events
  */
-export function listenForMissionLaunched(
-  socket: WebSocket,
-  onMissionLaunched: (data: any) => void
-): () => void {
+export function listenForMissionLaunched(socket: WebSocket, onMissionLaunched: (data: any) => void): () => void {
   return listenForWebSocketMessages(socket, {
-    'mission-launched': onMissionLaunched
+    "mission-launched": onMissionLaunched,
   });
 }

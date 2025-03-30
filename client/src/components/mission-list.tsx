@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Calendar, Clock, MapPin, Users, ChevronRight, Eye } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -23,16 +23,10 @@ interface MissionListProps {
   showDetails?: boolean;
 }
 
-export function MissionList({
-  missions,
-  isLoading,
-  showViewAll = false,
-  limit,
-  drones = [],
-  showDetails = false,
-}: MissionListProps) {
+export function MissionList({ missions, isLoading, showViewAll = false, limit, drones = [], showDetails = false }: MissionListProps) {
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [location, setLocation] = useLocation(); // Use useLocation from wouter
 
   // Fetch drone assignments if we have a selected mission
   const { data: assignments } = useQuery<DroneAssignment[]>({
@@ -41,9 +35,7 @@ export function MissionList({
   });
 
   // Get the assigned drones for the selected mission
-  const assignedDrones = assignments
-    ? drones.filter(drone => assignments.some(a => a.droneId === drone.id))
-    : [];
+  const assignedDrones = assignments ? drones.filter((drone) => assignments.some((a) => a.droneId === drone.id)) : [];
 
   // Limit the number of missions shown if limit is specified
   const displayMissions = limit ? missions.slice(0, limit) : missions;
@@ -51,6 +43,11 @@ export function MissionList({
   const handleViewDetails = (mission: Mission) => {
     setSelectedMission(mission);
     setDetailsDialogOpen(true);
+  };
+
+  // Function to navigate to mission details page using setLocation
+  const handleMissionNameClick = (missionId: string) => {
+    setLocation(`/missions/${missionId}`);
   };
 
   return (
@@ -90,13 +87,13 @@ export function MissionList({
                 <div key={mission.id} className="p-4">
                   <div className="flex justify-between">
                     <div>
-                      <h3 className="font-medium text-gray-800">{mission.name}</h3>
+                      <h3 className="font-medium text-gray-800 cursor-pointer hover:text-primary" onClick={() => handleMissionNameClick(mission.id)}>
+                        {mission.name}
+                      </h3>
                       {mission.startTime && (
                         <p className="text-sm text-gray-500">
                           Scheduled: {new Date(mission.startTime).toLocaleString()}
-                          {mission.estimatedDuration && (
-                            <span> ({Math.round(mission.estimatedDuration / 60)} mins)</span>
-                          )}
+                          {mission.estimatedDuration && <span> ({Math.round(mission.estimatedDuration / 60)} mins)</span>}
                         </p>
                       )}
                     </div>
@@ -106,9 +103,7 @@ export function MissionList({
 
                   <div className="mt-2 text-xs text-gray-500 flex items-center">
                     <Calendar className="h-3 w-3 mr-1" />
-                    {mission.startDate 
-                      ? format(new Date(mission.startDate), "MMM d, yyyy")
-                      : "Not scheduled"}
+                    {mission.startDate ? format(new Date(mission.startDate), "MMM d, yyyy") : "Not scheduled"}
 
                     {mission.isRecurring && (
                       <span className="ml-2">
@@ -120,24 +115,18 @@ export function MissionList({
 
                   <div className="mt-3 flex items-center justify-between">
                     <div className="flex -space-x-2">
-                      {drones.filter(drone => drone.status === 'in-mission').slice(0, 3).map((drone) => (
-                        <div 
-                          key={drone.id}
-                          className="h-6 w-6 rounded-full ring-2 ring-white bg-gray-200 flex items-center justify-center text-xs"
-                          title={drone.name}
-                        >
-                          {drone.name.charAt(0).toUpperCase()}
-                        </div>
-                      ))}
+                      {drones
+                        .filter((drone) => drone.status === "in-mission")
+                        .slice(0, 3)
+                        .map((drone) => (
+                          <div key={drone.id} className="h-6 w-6 rounded-full ring-2 ring-white bg-gray-200 flex items-center justify-center text-xs" title={drone.name}>
+                            {drone.name.charAt(0).toUpperCase()}
+                          </div>
+                        ))}
                     </div>
 
                     {showDetails ? (
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="text-sm text-primary"
-                        onClick={() => handleViewDetails(mission)}
-                      >
+                      <Button variant="ghost" size="sm" className="text-sm text-primary" onClick={() => handleViewDetails(mission)}>
                         <Eye className="h-4 w-4 mr-1" />
                         Details
                       </Button>
@@ -175,9 +164,7 @@ export function MissionList({
                 <div>{selectedMission.name}</div>
                 <StatusBadge status={selectedMission.status} />
               </DialogTitle>
-              <DialogDescription>
-                {selectedMission.description || "No description provided"}
-              </DialogDescription>
+              <DialogDescription>{selectedMission.description || "No description provided"}</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -191,20 +178,12 @@ export function MissionList({
 
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                    <span>
-                      {selectedMission.startDate 
-                        ? format(new Date(selectedMission.startDate), "MMMM d, yyyy")
-                        : "Not scheduled"}
-                    </span>
+                    <span>{selectedMission.startDate ? format(new Date(selectedMission.startDate), "MMMM d, yyyy") : "Not scheduled"}</span>
                   </div>
 
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 mr-2 text-gray-500" />
-                    <span>
-                      {selectedMission.isRecurring 
-                        ? `Recurring (${selectedMission.recurringSchedule || "Not specified"})`
-                        : "One-time mission"}
-                    </span>
+                    <span>{selectedMission.isRecurring ? `Recurring (${selectedMission.recurringSchedule || "Not specified"})` : "One-time mission"}</span>
                   </div>
 
                   <div className="flex items-center">
@@ -217,12 +196,10 @@ export function MissionList({
                   <>
                     <h4 className="font-medium text-sm mt-4 mb-2">Assigned Drones</h4>
                     <div className="space-y-2">
-                      {assignedDrones.map(drone => (
+                      {assignedDrones.map((drone) => (
                         <div key={drone.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                           <div className="flex items-center">
-                            <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center mr-2">
-                              {drone.name.charAt(0).toUpperCase()}
-                            </div>
+                            <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center mr-2">{drone.name.charAt(0).toUpperCase()}</div>
                             <div>
                               <div className="font-medium text-sm">{drone.name}</div>
                               <div className="text-xs text-gray-500">{drone.model}</div>
@@ -242,11 +219,7 @@ export function MissionList({
               <div>
                 <h4 className="font-medium text-sm mb-2">Mission Map</h4>
                 <div className="h-[300px] border rounded overflow-hidden">
-                  <MapComponent 
-                    drones={assignedDrones}
-                    missions={[selectedMission]}
-                    waypoints={assignments?.[0]?.waypoints || []}
-                  />
+                  <MapComponent drones={assignedDrones} missions={[selectedMission]} waypoints={assignments?.[0]?.waypoints || []} />
                 </div>
               </div>
             </div>

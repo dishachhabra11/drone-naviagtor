@@ -12,6 +12,7 @@ import Analytics from "@/pages/analytics";
 import { AuthProvider } from "./hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Route } from "wouter";
+import MissionDetails from "@/pages/mission-details";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
       <ProtectedRoute path="/missions" component={Missions} />
       <ProtectedRoute path="/mission-planner" component={MissionPlanner} />
       <ProtectedRoute path="/analytics" component={Analytics} />
+      <ProtectedRoute path="/missions/:missionId" component={MissionDetails} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
