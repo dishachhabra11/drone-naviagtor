@@ -81,7 +81,7 @@
       {
         "name": "wednei",
         "model": "jebf",
-        "status": "available",
+        "status": "in-mission",
         "batteryLevel": 100,
         "lastKnownLocation": {
           "lat": 34.053709,
@@ -201,6 +201,23 @@
         "pathDistance": null,
         "waypoints": []
       }
+    ],
+    [
+      5,
+      {
+        "name": "dcbjdk",
+        "description": "ebjvri",
+        "status": "in-progress",
+        "location": "{\"address\":\"vfbjvr\",\"isRecurring\":false,\"recurringSchedule\":null,\"launchImmediately\":true}",
+        "startTime": "2025-03-30T15:56:59.734Z",
+        "organizationId": 1,
+        "id": 5,
+        "createdAt": "2025-03-30T15:57:02.435Z",
+        "endTime": null,
+        "estimatedDuration": null,
+        "pathDistance": null,
+        "waypoints": []
+      }
     ]
   ],
   "droneAssignments": [
@@ -292,12 +309,54 @@
         "createdAt": "2025-03-30T15:48:51.723Z",
         "isActive": true
       }
+    ],
+    [
+      5,
+      {
+        "droneId": 5,
+        "missionId": 5,
+        "waypoints": [
+          {
+            "lat": 34.05290204643932,
+            "lng": -118.24285267230167,
+            "altitude": 50
+          },
+          {
+            "lat": 34.056597753132294,
+            "lng": -118.23500096578918,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05290204643932,
+            "lng": -118.22905661400722,
+            "altitude": 50
+          },
+          {
+            "lat": 34.04774910954138,
+            "lng": -118.2347218510994,
+            "altitude": 50
+          },
+          {
+            "lat": 34.051622725814354,
+            "lng": -118.23832700197622,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05258221809295,
+            "lng": -118.24240425594408,
+            "altitude": 50
+          }
+        ],
+        "isActive": true,
+        "id": 5,
+        "createdAt": "2025-03-30T15:57:02.721Z"
+      }
     ]
   ],
   "missionResults": [],
   "currentOrgId": 2,
   "currentDroneId": 6,
-  "currentMissionId": 5,
-  "currentAssignmentId": 5,
+  "currentMissionId": 6,
+  "currentAssignmentId": 6,
   "currentResultId": 1
 }

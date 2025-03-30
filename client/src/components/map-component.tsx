@@ -31,13 +31,14 @@ function MovingMarker({
   speed?: number 
 }) {
   // Debug logging to check what's happening with the moving marker
-  console.log(`MovingMarker - Drone ${drone.id} (${drone.name}): isActive=${isActive}, path length=${path.length}, mission status=${mission?.status}`);
+  console.log(`MovingMarker - Drone ${drone.id} (${drone.name}): isActive=${isActive}, path length=${path.length}, mission status=${mission?.status}, assignedMissionId=${drone.assignedMissionId}`);
   const map = useMap();
   const [position, setPosition] = useState<L.LatLng | null>(null);
   const [segmentIndex, setSegmentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const animationRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
+  const missionIdRef = useRef<number | undefined>(mission?.id);
   
   // Set initial position
   useEffect(() => {
@@ -48,9 +49,26 @@ function MovingMarker({
     }
   }, [path]);
   
+  // Check if mission ID matches the assigned mission
+  useEffect(() => {
+    // Update mission ID reference when mission changes
+    if (mission?.id) {
+      missionIdRef.current = mission.id;
+    }
+  }, [mission]);
+
   // Handle active state change
   useEffect(() => {
-    if (isActive && path.length > 1) {
+    // Only activate if either:
+    // 1. The mission ID matches the drone's assigned mission ID, or
+    // 2. The drone is explicitly in "in-mission" status
+    const shouldBeActive = isActive && 
+      path.length > 1 && 
+      (drone.status === 'in-mission' || (drone.assignedMissionId && mission && drone.assignedMissionId === mission.id));
+    
+    console.log(`Drone ${drone.id} animation - shouldBeActive: ${shouldBeActive}, assignedMissionId: ${drone.assignedMissionId}, missionId: ${mission?.id}`);
+    
+    if (shouldBeActive) {
       // Fit bounds to show the entire path
       map.fitBounds(L.latLngBounds(path));
       
@@ -121,7 +139,7 @@ function MovingMarker({
         animationRef.current = null;
       }
     };
-  }, [isActive, path, map, segmentIndex, progress, speed]);
+  }, [isActive, path, map, segmentIndex, progress, speed, drone.status, drone.assignedMissionId, mission?.id]);
   
   if (!isActive || !position) return null;
   
@@ -604,8 +622,14 @@ export function MapComponent({ drones, missions, isPlanning = false, waypoints =
       
       // Find the assigned drone(s) for this mission
       const assignedDrones = drones.filter(drone => {
-        const isAssigned = drone.assignedMissionId === mission.id;
-        console.log(`Checking drone ${drone.id} (${drone.name}): status=${drone.status}, assignedToMission=${isAssigned}`);
+        // A drone is assigned to a mission if:
+        // 1. Its assignedMissionId matches the mission ID, OR
+        // 2. Its status is 'in-mission' and the mission is in-progress (for immediate launch)
+        const isAssignedById = drone.assignedMissionId === mission.id;
+        const isAssignedByStatus = drone.status === 'in-mission' && mission.status === 'in-progress';
+        const isAssigned = isAssignedById || isAssignedByStatus;
+        
+        console.log(`Checking drone ${drone.id} (${drone.name}): status=${drone.status}, assignedMissionId=${drone.assignedMissionId}, missionId=${mission.id}, isAssigned=${isAssigned}`);
         return isAssigned;
       });
       

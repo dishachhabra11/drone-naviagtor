@@ -212,33 +212,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Update mission status to 'in-progress'
             await storage.updateMission(mission.id, { status: 'in-progress' });
             
-            // Also update assigned drones status to 'in-mission'
+            // The updated mission to send out (with additional data)
+            let updatedMissionData: any = await storage.getMission(mission.id);
+            
+            // We'll collect the waypoints from assignments to attach to the mission
+            updatedMissionData.waypoints = [];
+            
+            // Check if there are existing assignments
             const assignments = await storage.getDroneAssignmentsByMission(mission.id);
-            for (const assignment of assignments) {
-              const drone = await storage.getDrone(assignment.droneId);
-              if (drone && drone.status === 'available') {
-                await storage.updateDrone(drone.id, { 
-                  status: 'in-mission', 
-                  assignedMissionId: mission.id 
-                });
+            
+            // If no assignments yet, we're still waiting for them to be created after this endpoint
+            if (assignments.length > 0) {
+              // Update assigned drones status to 'in-mission'
+              for (const assignment of assignments) {
+                const drone = await storage.getDrone(assignment.droneId);
+                if (drone && drone.status === 'available') {
+                  await storage.updateDrone(drone.id, { 
+                    status: 'in-mission', 
+                    assignedMissionId: mission.id 
+                  });
+                }
+                
+                // Use the waypoints from the first assignment
+                if (assignment.waypoints && Array.isArray(assignment.waypoints) && assignment.waypoints.length > 0) {
+                  updatedMissionData.waypoints = assignment.waypoints;
+                }
               }
+              
+              // Broadcast this launch to all connected WebSocket clients
+              wss.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify({
+                    type: 'mission-launched',
+                    mission: updatedMissionData
+                  }));
+                }
+              });
             }
             
-            // Get the updated mission with the new status
-            const updatedMission = await storage.getMission(mission.id);
-            
-            // Broadcast this launch to all connected WebSocket clients
-            wss.clients.forEach((client) => {
-              if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({
-                  type: 'mission-launched',
-                  mission: updatedMission
-                }));
-              }
-            });
-            
             // Return the updated mission
-            res.status(201).json(updatedMission);
+            res.status(201).json(updatedMissionData);
             return;
           }
         } catch (e) {
@@ -376,8 +389,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const assignment = await storage.createDroneAssignment(assignmentData);
       
-      // Update drone status to 'in-mission'
-      await storage.updateDrone(assignment.droneId, { status: 'in-mission' });
+      // Get the mission to check if it's an immediate launch
+      const currentMission = await storage.getMission(missionId);
+      
+      // Update drone status to 'in-mission' and set assignedMissionId
+      await storage.updateDrone(assignment.droneId, { 
+        status: 'in-mission',
+        assignedMissionId: missionId
+      });
+      
+      // If mission is in-progress, broadcast a WebSocket notification
+      if (currentMission && currentMission.status === 'in-progress') {
+        // Update mission with waypoints to send in the WebSocket
+        const missionWithData = {
+          ...currentMission,
+          waypoints: assignment.waypoints
+        };
+        
+        // Broadcast this launch to all connected WebSocket clients
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'mission-launched',
+              mission: missionWithData
+            }));
+          }
+        });
+      }
       
       res.status(201).json(assignment);
     } catch (error) {
