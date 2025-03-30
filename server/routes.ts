@@ -187,7 +187,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const missionData = insertMissionSchema.parse(data);
       
+      // Create the mission
       const mission = await storage.createMission(missionData);
+      
+      // Check if this is a mission that should launch immediately
+      if (mission.location) {
+        try {
+          // mission.location is a jsonb field that could be parsed already or still a string
+          let locationData: { 
+            address?: string; 
+            isRecurring?: boolean; 
+            recurringSchedule?: string | null;
+            launchImmediately?: boolean;
+          };
+          
+          if (typeof mission.location === 'string') {
+            locationData = JSON.parse(mission.location);
+          } else {
+            locationData = mission.location as any;
+          }
+          if (locationData.launchImmediately) {
+            console.log('Launching mission immediately:', mission.id);
+            
+            // Update mission status to 'in-progress'
+            await storage.updateMission(mission.id, { status: 'in-progress' });
+            
+            // Also update assigned drones status to 'in-mission'
+            const assignments = await storage.getDroneAssignmentsByMission(mission.id);
+            for (const assignment of assignments) {
+              const drone = await storage.getDrone(assignment.droneId);
+              if (drone && drone.status === 'available') {
+                await storage.updateDrone(drone.id, { 
+                  status: 'in-mission', 
+                  assignedMissionId: mission.id 
+                });
+              }
+            }
+            
+            // Get the updated mission with the new status
+            const updatedMission = await storage.getMission(mission.id);
+            
+            // Broadcast this launch to all connected WebSocket clients
+            wss.clients.forEach((client) => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'mission-launched',
+                  mission: updatedMission
+                }));
+              }
+            });
+            
+            // Return the updated mission
+            res.status(201).json(updatedMission);
+            return;
+          }
+        } catch (e) {
+          console.error('Error parsing mission location data:', e);
+          // Continue with normal processing if parsing fails
+        }
+      }
+      
+      // Return the mission as usual if not launching immediately
       res.status(201).json(mission);
     } catch (error) {
       console.error('Mission creation error:', error);

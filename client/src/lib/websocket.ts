@@ -62,22 +62,34 @@ export function sendDroneLocationUpdate(
 }
 
 /**
- * Listens for drone location updates from the WebSocket
- * @param socket The WebSocket connection
- * @param onDroneUpdate Callback function to handle drone updates
+ * Type definition for WebSocket message handlers
  */
-export function listenForDroneUpdates(
+export interface WebSocketMessageHandlers {
+  'drone-location-update'?: (data: any) => void;
+  'mission-launched'?: (data: any) => void;
+  'connected'?: (data: any) => void;
+  [key: string]: ((data: any) => void) | undefined;
+}
+
+/**
+ * Listens for all types of WebSocket messages and routes them to appropriate handlers
+ * @param socket The WebSocket connection
+ * @param handlers Object with handlers for different message types
+ */
+export function listenForWebSocketMessages(
   socket: WebSocket,
-  onDroneUpdate: (data: any) => void
+  handlers: WebSocketMessageHandlers
 ): () => void {
   const handleMessage = (event: MessageEvent) => {
     try {
       const data = JSON.parse(event.data);
-      if (data.type === 'drone-location-update') {
-        onDroneUpdate(data);
+      const messageType = data.type;
+      
+      if (messageType && handlers[messageType]) {
+        handlers[messageType]!(data);
       }
     } catch (error) {
-      console.error('Error parsing WebSocket message:', error);
+      console.error('Error handling WebSocket message:', error);
     }
   };
   
@@ -87,4 +99,32 @@ export function listenForDroneUpdates(
   return () => {
     socket.removeEventListener('message', handleMessage);
   };
+}
+
+/**
+ * Listens for drone location updates from the WebSocket
+ * @param socket The WebSocket connection
+ * @param onDroneUpdate Callback function to handle drone updates
+ */
+export function listenForDroneUpdates(
+  socket: WebSocket,
+  onDroneUpdate: (data: any) => void
+): () => void {
+  return listenForWebSocketMessages(socket, {
+    'drone-location-update': onDroneUpdate
+  });
+}
+
+/**
+ * Listens for mission launched events from the WebSocket
+ * @param socket The WebSocket connection
+ * @param onMissionLaunched Callback function to handle mission launched events
+ */
+export function listenForMissionLaunched(
+  socket: WebSocket,
+  onMissionLaunched: (data: any) => void
+): () => void {
+  return listenForWebSocketMessages(socket, {
+    'mission-launched': onMissionLaunched
+  });
 }

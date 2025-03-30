@@ -48,7 +48,7 @@
       {
         "name": "sjbxsj",
         "model": "kdcbkj",
-        "status": "available",
+        "status": "in-mission",
         "batteryLevel": 100,
         "lastKnownLocation": {
           "lat": 34.0567,
@@ -70,7 +70,34 @@
         "location": "{\"address\":\"Indore, IN Madhya Pradesh\",\"isRecurring\":false,\"recurringSchedule\":null}",
         "endTime": "2025-03-30T14:52:00.000Z",
         "organizationId": 1,
-        "id": 1
+        "id": 1,
+        "waypoints": [
+          {
+            "lat": 34.06571188961947,
+            "lng": -118.25108812545454,
+            "altitude": 50
+          },
+          {
+            "lat": 34.07395469116494,
+            "lng": -118.21983373928637,
+            "altitude": 50
+          },
+          {
+            "lat": 34.084754389535775,
+            "lng": -118.2414886899742,
+            "altitude": 50
+          },
+          {
+            "lat": 34.07310202474723,
+            "lng": -118.26860384185831,
+            "altitude": 50
+          },
+          {
+            "lat": 34.06372212771874,
+            "lng": -118.25281527240679,
+            "altitude": 50
+          }
+        ]
       }
     ],
     [
@@ -78,11 +105,50 @@
       {
         "name": "Disha Chhabra",
         "description": "hawk",
-        "status": "planned",
+        "status": "in-progress",
         "location": "{\"address\":\"Indore, IN Madhya Pradesh\",\"isRecurring\":false,\"recurringSchedule\":null}",
         "startTime": "2025-03-30T15:30:00.000Z",
         "organizationId": 1,
-        "id": 2
+        "id": 2,
+        "waypoints": [
+          {
+            "lat": 34.06944036281721,
+            "lng": -118.2779891663356,
+            "altitude": 50
+          },
+          {
+            "lat": 34.05024155429952,
+            "lng": -118.27816088333411,
+            "altitude": 50
+          },
+          {
+            "lat": 34.056214982984656,
+            "lng": -118.24553465361664,
+            "altitude": 50
+          },
+          {
+            "lat": 34.06887157175504,
+            "lng": -118.27610027935194,
+            "altitude": 50
+          }
+        ]
+      }
+    ],
+    [
+      3,
+      {
+        "name": "Disha Chhabra",
+        "description": null,
+        "status": "in-progress",
+        "location": "{\"address\":\"nejdn\",\"isRecurring\":true,\"recurringSchedule\":null}",
+        "startTime": "2025-03-30T15:39:00.000Z",
+        "organizationId": 1,
+        "id": 3,
+        "createdAt": "2025-03-30T15:39:08.608Z",
+        "endTime": null,
+        "estimatedDuration": null,
+        "pathDistance": null,
+        "waypoints": []
       }
     ]
   ],
@@ -153,12 +219,23 @@
         "isActive": true,
         "id": 2
       }
+    ],
+    [
+      3,
+      {
+        "droneId": 3,
+        "missionId": 3,
+        "waypoints": [],
+        "id": 3,
+        "createdAt": "2025-03-30T15:39:08.887Z",
+        "isActive": true
+      }
     ]
   ],
   "missionResults": [],
   "currentOrgId": 2,
   "currentDroneId": 4,
-  "currentMissionId": 3,
-  "currentAssignmentId": 3,
+  "currentMissionId": 4,
+  "currentAssignmentId": 4,
   "currentResultId": 1
 }

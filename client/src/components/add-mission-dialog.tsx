@@ -26,6 +26,9 @@ const missionFormSchema = z.object({
   isRecurring: z.boolean().default(false),
   recurringSchedule: z.string().optional(),
   
+  // Launch option
+  launchImmediately: z.boolean().default(false),
+  
   // Date and time fields for scheduling
   startDate: z.date().optional(),
   startTime: z.string().optional(),
@@ -58,6 +61,7 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
       status: "planned",
       isRecurring: false,
       recurringSchedule: "",
+      launchImmediately: false,
       startDate: undefined,
       startTime: "",
       endDate: undefined,
@@ -107,13 +111,16 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
   });
   
   function onSubmit(values: MissionFormValues) {
-    const { selectedDrones, startDate, endDate, startTime, endTime, ...otherData } = values;
+    const { selectedDrones, startDate, endDate, startTime, endTime, launchImmediately, ...otherData } = values;
     
     // Process start time and end time
     let combinedStartTime: Date | undefined;
     let combinedEndTime: Date | undefined;
     
-    if (startDate && startTime) {
+    if (launchImmediately) {
+      // Set start time to now if launching immediately
+      combinedStartTime = new Date();
+    } else if (startDate && startTime) {
       // Combine date and time into a single Date object
       const [hours, minutes] = startTime.split(':').map(Number);
       combinedStartTime = new Date(startDate);
@@ -127,10 +134,13 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
       combinedEndTime.setHours(hours, minutes);
     }
     
+    // Set the mission status based on whether it's launching immediately
+    const initialStatus = launchImmediately ? "in-progress" : "planned";
+    
     // Create mission data with correct types
     const mission: InsertMission = {
       name: otherData.name,
-      status: otherData.status,
+      status: initialStatus,
       description: otherData.description,
       startTime: combinedStartTime,
       endTime: combinedEndTime,
@@ -138,7 +148,8 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
       location: JSON.stringify({
         address: otherData.location,
         isRecurring: otherData.isRecurring,
-        recurringSchedule: otherData.recurringSchedule || null
+        recurringSchedule: otherData.recurringSchedule || null,
+        launchImmediately: launchImmediately
       }),
       organizationId: user?.id || 0,
     };
@@ -268,8 +279,13 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
               <AccordionItem value="schedule">
                 <AccordionTrigger>Schedule</AccordionTrigger>
                 <AccordionContent>
+                  {form.watch("launchImmediately") && (
+                    <div className="mb-4 p-2 bg-yellow-50 border border-yellow-100 rounded-md text-yellow-800 text-sm">
+                      <p>Schedule settings are disabled because "Launch Immediately" is enabled.</p>
+                    </div>
+                  )}
                   <h3 className="font-medium text-sm mb-2">Mission Launch Time</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border rounded-md p-4 bg-muted/30">
+                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border rounded-md p-4 bg-muted/30 ${form.watch("launchImmediately") ? "opacity-50" : ""}`}>
                     <FormField
                       control={form.control}
                       name="startDate"
@@ -285,6 +301,7 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                                   field.onChange(date);
                                 }
                               }}
+                              disabled={form.watch("launchImmediately")}
                             />
                           </FormControl>
                           <FormMessage />
@@ -302,6 +319,7 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                             <Input 
                               type="time" 
                               {...field}
+                              disabled={form.watch("launchImmediately")}
                             />
                           </FormControl>
                           <FormDescription>
@@ -314,7 +332,7 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                   </div>
                   
                   <h3 className="font-medium text-sm mb-2">Mission End Time (Optional)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-md p-4 bg-muted/30">
+                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-md p-4 bg-muted/30 ${form.watch("launchImmediately") ? "opacity-50" : ""}`}>
                     <FormField
                       control={form.control}
                       name="endDate"
@@ -330,6 +348,7 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                                   field.onChange(date);
                                 }
                               }}
+                              disabled={form.watch("launchImmediately")}
                             />
                           </FormControl>
                           <FormMessage />
@@ -347,6 +366,7 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                             <Input 
                               type="time" 
                               {...field}
+                              disabled={form.watch("launchImmediately")}
                             />
                           </FormControl>
                           <FormDescription>
@@ -367,9 +387,10 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
+                            disabled={form.watch("launchImmediately")}
                           />
                         </FormControl>
-                        <div className="space-y-1 leading-none">
+                        <div className={`space-y-1 leading-none ${form.watch("launchImmediately") ? "opacity-50" : ""}`}>
                           <FormLabel>Recurring Mission</FormLabel>
                           <FormDescription>
                             Enable if this mission should repeat on a schedule
@@ -379,7 +400,7 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                     )}
                   />
                   
-                  {form.watch("isRecurring") && (
+                  {form.watch("isRecurring") && !form.watch("launchImmediately") && (
                     <FormField
                       control={form.control}
                       name="recurringSchedule"
@@ -389,6 +410,7 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                           <Select
                             onValueChange={field.onChange}
                             defaultValue={field.value}
+                            disabled={form.watch("launchImmediately")}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -413,6 +435,27 @@ export function AddMissionDialog({ open, onOpenChange, drones }: AddMissionDialo
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+            
+            <FormField
+              control={form.control}
+              name="launchImmediately"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Launch Immediately</FormLabel>
+                    <FormDescription>
+                      Enable to start the mission as soon as it's created, using current drone location
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
             
             <DialogFooter>
               <Button 
